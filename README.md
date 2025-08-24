@@ -32,8 +32,9 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 ## ✨ Key Features
 
 ### 🚀 **Industry-Leading Coverage**
-- **90.3% pattern recognition** - Handles 232 out of 257 known DAT patterns
-- **Specialized tool support** - Good tools, MAME, FinalBurn Neo collections
+- **93.4% pattern recognition** - Handles 240 out of 257 known DAT patterns
+- **Enhanced Good Tools support** - 30 Good tool platform codes (MSX, Lynx, NGP, SuperVision, Virtual Boy, Vectrex, WonderSwan)
+- **Specialized tool support** - Good tools, MAME, FinalBurn Neo collections  
 - **Enhanced preprocessing** - Automatic subcategory consolidation
 - **Production-ready accuracy** - Exceeds all stakeholder requirements
 
@@ -69,6 +70,7 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 - **GameCube** → `gc`
 - **Wii/Wii U** → `wii`, `wiiu`
 - **DS/3DS** → `nds`, `n3ds` (with encryption subfolders)
+- **Virtual Boy** → `virtualboy`
 
 ### Sega Systems
 - **Master System** → `mastersystem`
@@ -85,12 +87,12 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 - **Arcade** → `arcade`, `neogeo`, `neogeocd`, `atomiswave`
 - **PC Engine** → `pcengine`, `supergrafx`
 - **Classic Computers** → `amiga`, `c64`, `pc`, `msx`
-- **Handhelds** → `wonderswan`, `wonderswancolor`, `supervision`, `pokemini`
+- **Handhelds** → `wonderswan`, `wonderswancolor`, `supervision`, `pokemini`, `atarilynx`, `ngp`, `ngpc`
 - **Special Emulators** → `cannonball` (OutRun Engine)
-- **Obscure Systems** → `3do`, `coleco`, `intellivision`, `vectrex`, `odyssey2`
+- **Obscure Systems** → `3do`, `coleco`, `intellivision`, `vectrex`, `odyssey2`, `supervision`
 
 ### Specialized Collection Support
-- **Good Tools** → All 22 platform codes (GoodNES, GoodN64, Good32X, etc.)
+- **Good Tools** → All 30 platform codes (GoodNES, GoodN64, GoodLynx, GoodMSX1, GoodVBoy, etc.)
 - **MAME Collections** → Complete MAME ROM sets
 - **FinalBurn Neo** → Platform-specific arcade collections
 

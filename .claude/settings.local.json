@@ -30,7 +30,8 @@
       "Read(//mnt/e/Emulation/dat-to-sc/roms-source/**)",
       "mcp__perplexity-mcp__perplexity_search_web",
       "Bash(cat:*)",
-      "Bash(claude /model sonnet)"
+      "Bash(claude /model sonnet)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": [],

@@ -27,6 +27,7 @@ class GoodPatternHandler:
         'SAT': ('saturn', 'Sega Saturn'),
         'PCE': ('pcengine', 'PC Engine'),
         'Lynx': ('atarilynx', 'Atari Lynx'),
+        'LYNX': ('atarilynx', 'Atari Lynx'),  # Added: GoodLynx pattern
         '5200': ('atari5200', 'Atari 5200'),
         '7800': ('atari7800', 'Atari 7800'),
         '2600': ('atari2600', 'Atari 2600'),
@@ -38,6 +39,14 @@ class GoodPatternHandler:
         'GBA': ('gba', 'Game Boy Advance'),
         'COL': ('coleco', 'ColecoVision'),
         'INTV': ('intellivision', 'Mattel Intellivision'),
+        # Added: Missing Good Tools platform mappings
+        'MSX1': ('msx', 'MSX'),  # GoodMSX1
+        'MSX2': ('msx', 'MSX2'),  # GoodMSX2 - could also be msx2 if supported
+        'NGPX': ('ngp', 'Neo Geo Pocket'),  # GoodNGPx - covers NGP and NGPC
+        'SV': ('supervision', 'Watara SuperVision'),  # GoodSV
+        'VBOY': ('virtualboy', 'Nintendo Virtual Boy'),  # GoodVBoy
+        'VECT': ('vectrex', 'GCE Vectrex'),  # GoodVect
+        'WSX': ('wonderswan', 'WonderSwan'),  # GoodWSx - covers WS and WSC
     }
     
     def __init__(self, logger: Optional[logging.Logger] = None):

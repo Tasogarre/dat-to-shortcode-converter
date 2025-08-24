@@ -7,7 +7,9 @@ For general project information, see [README.md](README.md).
 This is a Python ROM collection management tool that converts DAT naming conventions (No-Intro, TOSEC, GoodTools, Redump) to standardized shortcode folder structures for emulation frontends like EmulationStation, RetroPie, and Batocera.
 
 **Key characteristics:**
-- **Production-ready system** with 90.3% coverage (232/257 DAT patterns)
+- **Production-ready system** with 93.4% coverage (240/257 DAT patterns)
+- **Latest fixes applied** - Directory scanning logic fixed, 8 new Good Tools platforms added
+- **Enhanced Good Tools support** - 30 platform codes including MSX, Lynx, NGP, SuperVision, Virtual Boy, Vectrex, WonderSwan
 - **Critical bug fixed** - Directory filter logic now works correctly
 - **Comprehensive ROM support** - 70+ file extensions from research database
 - **Enhanced debugging** - Console progress feedback and detailed analysis
@@ -345,7 +347,7 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 
 ### When Enhancing Pattern Matching
 1. **Follow three-tier priority** - Specialized → Preprocessed → Standard patterns  
-2. **Maintain 90%+ coverage** - validate with full DAT pattern dataset
+2. **Maintain 93%+ coverage** - validate with full DAT pattern dataset
 3. **Performance monitoring** - ensure sub-millisecond matching for common patterns
 4. **Comprehensive testing** - maintain 100% test suite success rate
 5. **Backward compatibility** - preserve all existing functionality
@@ -357,6 +359,34 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 - **Chain of Responsibility** - maintain preprocessing pipeline modularity
 - **Thread safety** - ensure concurrent operations remain safe
 
+## Recent Updates (2025-08-24)
+
+### Critical Bug Fix - Directory Scanning Logic ✅ RESOLVED
+**Issue:** Tool was incorrectly processing individual game subdirectories (like "Aero Fighter 2") as potential platforms, causing 310+ "unknown platforms" to be reported.
+
+**Root Cause:** `os.walk()` was recursively scanning ALL directories, including game subdirectories within platform folders.
+
+**Solution Applied:**
+- Modified directory scanning to process only top-level directories as potential platforms
+- Individual game subdirectories within platforms are now ignored for platform detection 
+- ROM files are still counted recursively within each platform directory for statistics
+- Updated `dat_to_shortcode_converter.py:628-675` with two-step scanning process
+
+**Result:** Unknown platform count reduced from 310+ to legitimate unrecognized platforms only.
+
+### Enhanced Good Tools Support ✅ COMPLETED
+**Added 8 new Good Tools platform mappings:**
+- `GoodLynx` → `atarilynx` (Atari Lynx)
+- `GoodMSX1` → `msx` (MSX original)
+- `GoodMSX2` → `msx` (MSX2)
+- `GoodNGPx` → `ngp` (Neo Geo Pocket/Color)
+- `GoodSV` → `supervision` (Watara SuperVision)
+- `GoodVBoy` → `virtualboy` (Nintendo Virtual Boy)
+- `GoodVect` → `vectrex` (GCE Vectrex)
+- `GoodWSx` → `wonderswan` (WonderSwan/Color)
+
+**Impact:** Coverage improved from 90.3% to 93.4% (240/257 DAT patterns).
+
 ---
 
-**Key principle:** The tool now achieves production-ready coverage (90.3%) through systematic three-tier pattern matching. Maintain this modular architecture while preserving the simplicity and portability that made it successful.
+**Key principle:** The tool now achieves enhanced production-ready coverage (93.4%) through systematic three-tier pattern matching and comprehensive Good Tools support. Maintain this modular architecture while preserving the simplicity and portability that made it successful.

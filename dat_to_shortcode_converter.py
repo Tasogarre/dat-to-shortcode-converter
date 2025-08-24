@@ -625,29 +625,42 @@ class PlatformAnalyzer:
         directories_skipped_target = 0
         directories_with_roms = 0
         
-        # Recursively scan all directories
-        for root, dirs, files in os.walk(self.source_dir):
-            root_path = Path(root)
+        # Scan top-level directories (non-recursive to avoid game subdirectories)
+        source_path = Path(self.source_dir)
+        
+        # First, get all top-level directories
+        top_level_dirs = []
+        try:
+            for item in source_path.iterdir():
+                if item.is_dir():
+                    top_level_dirs.append(item)
+        except (OSError, PermissionError) as e:
+            self.logger.error(f"Error accessing source directory: {e}")
+            return platforms, excluded, unknown
+        
+        # Process each top-level directory and count ROM files recursively within each
+        for platform_dir in top_level_dirs:
             directories_processed += 1
             
             if debug_mode:
-                self.logger.debug(f"Processing directory: {root_path}")
-                self.logger.debug(f"  Contains {len(files)} files: {files[:10]}{'...' if len(files) > 10 else ''}")
+                self.logger.debug(f"Processing top-level directory: {platform_dir}")
             
             # Skip target directory to avoid loops (precise path comparison)
-            if target_dir and root_path.resolve() == target_dir.resolve():
+            if target_dir and platform_dir.resolve() == target_dir.resolve():
                 directories_skipped_target += 1
                 if debug_mode:
-                    self.logger.debug(f"  Skipped: Target directory (exact match): {root_path}")
+                    self.logger.debug(f"  Skipped: Target directory (exact match): {platform_dir}")
                 continue
                 
-            # Count ROM files in this directory
-            rom_files = [f for f in files if Path(f).suffix.lower() in ROM_EXTENSIONS]
-            all_extensions = {Path(f).suffix.lower() for f in files}
+            # Count ROM files recursively within this platform directory
+            rom_files = []
+            all_extensions = set()
             
-            if debug_mode:
-                self.logger.debug(f"  ROM files found: {len(rom_files)} ({rom_files[:5]}{'...' if len(rom_files) > 5 else ''})")
-                self.logger.debug(f"  All extensions: {sorted(all_extensions)}")
+            for root, dirs, files in os.walk(platform_dir):
+                for file in files:
+                    all_extensions.add(Path(file).suffix.lower())
+                    if Path(file).suffix.lower() in ROM_EXTENSIONS:
+                        rom_files.append(file)
             
             if not rom_files and not include_empty_dirs:
                 directories_skipped_roms += 1
@@ -659,7 +672,7 @@ class PlatformAnalyzer:
             if rom_files:
                 directories_with_roms += 1
                 
-            folder_name = root_path.name
+            folder_name = platform_dir.name
             
             if debug_mode:
                 self.logger.debug(f"  Folder name: '{folder_name}'")
@@ -699,7 +712,7 @@ class PlatformAnalyzer:
                     display_name=current.display_name,
                     folder_count=current.folder_count + 1,
                     file_count=current.file_count + len(rom_files),
-                    source_folders=current.source_folders + [str(root_path)]
+                    source_folders=current.source_folders + [str(platform_dir)]
                 )
             else:
                 unknown.append(folder_name)
