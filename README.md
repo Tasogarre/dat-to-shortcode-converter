@@ -92,7 +92,7 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 - **Obscure Systems** → `3do`, `coleco`, `intellivision`, `vectrex`, `odyssey2`, `supervision`
 
 ### Specialized Collection Support
-- **Good Tools** → All 30 platform codes (GoodNES, GoodN64, GoodLynx, GoodMSX1, GoodVBoy, etc.)
+- **Good Tools** → All 33 platform codes (GoodNES, GoodN64, GoodLynx, GoodCoCo, GoodGen, GoodGBx, etc.)
 - **MAME Collections** → Complete MAME ROM sets
 - **FinalBurn Neo** → Platform-specific arcade collections
 

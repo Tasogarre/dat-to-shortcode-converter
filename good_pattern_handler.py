@@ -47,6 +47,10 @@ class GoodPatternHandler:
         'VBOY': ('virtualboy', 'Nintendo Virtual Boy'),  # GoodVBoy
         'VECT': ('vectrex', 'GCE Vectrex'),  # GoodVect
         'WSX': ('wonderswan', 'WonderSwan'),  # GoodWSx - covers WS and WSC
+        # Added: Additional Good Tools platform mappings from unknown platforms analysis
+        'COCO': ('coco', 'TRS-80 Color Computer'),  # GoodCoCo - TRS-80 CoCo support
+        'GEN': ('genesis', 'Sega Genesis'),  # GoodGen - case variant of existing Gen mapping
+        'GBX': ('gb', 'Game Boy'),  # GoodGBx - combined GB/GBC collection
     }
     
     def __init__(self, logger: Optional[logging.Logger] = None):
