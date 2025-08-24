@@ -1,9 +1,52 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(claude config list)",
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(claude /model opus-plan)",
+      "Bash(claude logout)",
+      "Bash(claude login)",
+      "Bash(grep:*)",
+      "mcp__clear-thought__sequentialthinking",
+      "mcp__clear-thought__mentalmodel",
+      "mcp__clear-thought__systemsthinking",
+      "mcp__clear-thought__scientificmethod",
+      "mcp__clear-thought__collaborativereasoning",
+      "mcp__clear-thought__socraticmethod",
+      "mcp__clear-thought__debuggingapproach",
+      "mcp__clear-thought__creativethinking",
+      "mcp__clear-thought__decisionframework",
+      "mcp__clear-thought__programmingparadigm",
+      "mcp__clear-thought__designpattern",
+      "mcp__clear-thought__structuredargumentation",
+      "mcp__context7-mcp__resolve-library-id",
+      "mcp__context7-mcp__get-library-docs",
+      "Read(//mnt/e/Emulation/dat-to-sc/roms-source/**)",
+      "mcp__perplexity-mcp__perplexity_search_web",
+      "Bash(cat:*)",
+      "Bash(claude /model sonnet)"
     ],
     "deny": [],
-    "ask": []
-  }
+    "ask": [],
+    "additionalDirectories": [
+      "/mnt/e",
+      "/mnt",
+      "/tmp/test-roms"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "context7-mcp",
+    "clear-thought",
+    "mcp-sequentialthinking-tools",
+    "n8n-mcp",
+    "perplexity-mcp",
+    "tavily-remote",
+    "playwright"
+  ]
 }

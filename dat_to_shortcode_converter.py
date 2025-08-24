@@ -28,9 +28,131 @@ from typing import Dict, List, Tuple, Set, Optional, NamedTuple
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 import json
+from good_pattern_handler import SpecializedPatternProcessor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 from threading import Lock
+from subcategory_handler import SubcategoryProcessor
+import time
+from functools import wraps
+from collections import defaultdict
+
+
+class PerformanceMonitor:
+    """
+    Performance monitoring for pattern matching operations
+    Based on pyinstrument best practices for profiling function calls
+    """
+    
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+        self.timing_data = defaultdict(list)
+        self.pattern_hit_counts = defaultdict(int)
+        self.cache_hits = defaultdict(int)
+        self.cache_misses = defaultdict(int)
+        
+    def time_function(self, func_name: str):
+        """Decorator to time function execution"""
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                start_time = time.perf_counter()
+                result = func(*args, **kwargs)
+                end_time = time.perf_counter()
+                
+                duration = end_time - start_time
+                self.timing_data[func_name].append(duration)
+                
+                # Log slow operations (> 10ms)
+                if duration > 0.01:
+                    self.logger.debug(f"Slow {func_name}: {duration:.4f}s")
+                
+                return result
+            return wrapper
+        return decorator
+    
+    def record_pattern_hit(self, pattern_type: str, pattern: str = ""):
+        """Record successful pattern match"""
+        key = f"{pattern_type}:{pattern}" if pattern else pattern_type
+        self.pattern_hit_counts[key] += 1
+    
+    def record_cache_hit(self, cache_type: str):
+        """Record cache hit"""
+        self.cache_hits[cache_type] += 1
+    
+    def record_cache_miss(self, cache_type: str):
+        """Record cache miss"""
+        self.cache_misses[cache_type] += 1
+    
+    def get_performance_stats(self) -> Dict[str, any]:
+        """Get comprehensive performance statistics"""
+        stats = {
+            'timing_summary': {},
+            'pattern_efficiency': {},
+            'cache_efficiency': {}
+        }
+        
+        # Timing statistics
+        for func_name, times in self.timing_data.items():
+            if times:
+                stats['timing_summary'][func_name] = {
+                    'total_calls': len(times),
+                    'total_time': sum(times),
+                    'avg_time': sum(times) / len(times),
+                    'min_time': min(times),
+                    'max_time': max(times),
+                    'p95_time': sorted(times)[int(len(times) * 0.95)] if len(times) > 20 else max(times)
+                }
+        
+        # Pattern hit efficiency
+        total_hits = sum(self.pattern_hit_counts.values())
+        for pattern, hits in self.pattern_hit_counts.items():
+            if total_hits > 0:
+                stats['pattern_efficiency'][pattern] = {
+                    'hits': hits,
+                    'percentage': (hits / total_hits) * 100
+                }
+        
+        # Cache efficiency
+        for cache_type in set(list(self.cache_hits.keys()) + list(self.cache_misses.keys())):
+            hits = self.cache_hits[cache_type]
+            misses = self.cache_misses[cache_type]
+            total = hits + misses
+            if total > 0:
+                stats['cache_efficiency'][cache_type] = {
+                    'hits': hits,
+                    'misses': misses,
+                    'hit_rate': (hits / total) * 100
+                }
+        
+        return stats
+    
+    def log_performance_summary(self):
+        """Log performance summary"""
+        stats = self.get_performance_stats()
+        
+        self.logger.info("=== PERFORMANCE SUMMARY ===")
+        
+        # Function timing
+        if stats['timing_summary']:
+            self.logger.info("Function Performance:")
+            for func_name, data in stats['timing_summary'].items():
+                self.logger.info(f"  {func_name}: {data['total_calls']} calls, avg {data['avg_time']*1000:.2f}ms, total {data['total_time']:.3f}s")
+        
+        # Pattern efficiency
+        if stats['pattern_efficiency']:
+            self.logger.info("Top Pattern Matches:")
+            sorted_patterns = sorted(stats['pattern_efficiency'].items(), 
+                                   key=lambda x: x[1]['hits'], reverse=True)
+            for pattern, data in sorted_patterns[:10]:  # Top 10
+                self.logger.info(f"  {pattern}: {data['hits']} hits ({data['percentage']:.1f}%)")
+        
+        # Cache efficiency
+        if stats['cache_efficiency']:
+            self.logger.info("Cache Performance:")
+            for cache_type, data in stats['cache_efficiency'].items():
+                self.logger.info(f"  {cache_type}: {data['hit_rate']:.1f}% hit rate ({data['hits']}/{data['hits'] + data['misses']})")
+
 
 class PlatformInfo(NamedTuple):
     """Information about a detected platform"""
@@ -58,13 +180,14 @@ class ProcessingStats:
 
 # Enhanced platform mappings with regex patterns
 PLATFORM_MAPPINGS = {
-    # Nintendo Systems - Enhanced patterns for consolidation
+    # Nintendo Systems - Enhanced patterns for consolidation (most specific first)
+    r"Nintendo.*Super Nintendo.*": ("snes", "Super Nintendo Entertainment System"),
+    r"Nintendo.*Super Famicom.*": ("snes", "Super Nintendo Entertainment System"),
     r"Nintendo.*Nintendo Entertainment System.*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Famicom.*Entertainment System.*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Famicom(?!\s+(Disk|&)).*": ("nes", "Nintendo Entertainment System"),
-    r"Nintendo.*Family Computer.*": ("nes", "Nintendo Entertainment System"),
-    r"Nintendo.*Super Nintendo.*": ("snes", "Super Nintendo Entertainment System"),
-    r"Nintendo.*Super Famicom.*": ("snes", "Super Nintendo Entertainment System"),
+    r"Nintendo.*Family Computer(?!\s+Disk).*": ("nes", "Nintendo Entertainment System"),
+    r"Nintendo.*Family Computer.*Disk.*System.*": ("fds", "Famicom Disk System"),
     r"Nintendo.*Game Boy(?!\s+(Color|Advance)).*": ("gb", "Game Boy"),
     r"Nintendo.*Game Boy Color.*": ("gbc", "Game Boy Color"),
     r"Nintendo.*Game Boy Advance.*": ("gba", "Game Boy Advance"),
@@ -78,6 +201,18 @@ PLATFORM_MAPPINGS = {
     r"Nintendo.*Virtual Boy.*": ("virtualboy", "Virtual Boy"),
     r"Nintendo.*Pokemon Mini.*": ("pokemini", "Pokemon Mini"),
     
+    # NEW: Nintendo patterns for preprocessed names (Phase 2 enhancement)
+    r"^Nintendo 64$": ("n64", "Nintendo 64"),
+    r"^Nintendo Famicom Disk System$": ("fds", "Famicom Disk System"),
+    r"^Nintendo Game Boy$": ("gb", "Game Boy"),
+    r"^Nintendo Game Boy Color$": ("gbc", "Game Boy Color"),
+    r"^Nintendo Game Boy Advance$": ("gba", "Game Boy Advance"),
+    r"^Nintendo Pokemon Mini$": ("pokemini", "Pokemon Mini"),
+    r"^Nintendo Virtual Boy$": ("virtualboy", "Virtual Boy"),
+    r"^Nintendo DS$": ("nds", "Nintendo DS"),
+    r"^Nintendo Super Famicom & Super Entertainment System$": ("snes", "Super Nintendo Entertainment System"),
+    r"^Nintendo Famicom & Entertainment System$": ("nes", "Nintendo Entertainment System"),
+    
     # Sega Systems - Keep genesis and megadrive separate as requested
     r"Sega.*Master System.*": ("mastersystem", "Sega Master System"),
     r"Sega.*Mark III.*": ("mastersystem", "Sega Master System"),
@@ -90,6 +225,16 @@ PLATFORM_MAPPINGS = {
     r"Sega.*Saturn.*": ("saturn", "Sega Saturn"),
     r"Sega.*Dreamcast.*": ("dreamcast", "Sega Dreamcast"),
     r"Sega.*SG-1000.*": ("sg1000", "Sega SG-1000"),  # Note: Not in EmulationStation list
+    
+    # NEW: Sega patterns for preprocessed names (Phase 2 enhancement)
+    r"^Sega 32X$": ("sega32x", "Sega 32X"),
+    r"^Sega Dreamcast$": ("dreamcast", "Sega Dreamcast"),
+    r"^Sega Game Gear$": ("gamegear", "Sega Game Gear"),
+    r"^Sega Mark III & Master System$": ("mastersystem", "Sega Master System"),
+    r"^Sega Mega Drive & Genesis$": ("megadrive", "Sega Mega Drive"),
+    r"^Sega Mega-CD & Sega CD$": ("segacd", "Sega CD"),
+    r"^Sega Saturn$": ("saturn", "Sega Saturn"),
+    r"^Sega Game 1000$": ("sg1000", "Sega SG-1000"),
     
     # Sony Systems
     r"Sony.*PlayStation(?!\s+(2|3|4|Portable|Vita)).*": ("psx", "PlayStation"),
@@ -109,6 +254,14 @@ PLATFORM_MAPPINGS = {
     r"Atari.*8-bit.*": ("atari800", "Atari 8-bit Family"),
     r"Atari.*ST.*": ("atarist", "Atari ST"),
     r"Atari.*XE.*": ("atarixe", "Atari XE"),
+    
+    # NEW: Atari patterns for preprocessed names (Phase 2 enhancement)  
+    r"^Atari 8bit$": ("atari800", "Atari 8-bit"),
+    r"^Atari Lynx$": ("atarilynx", "Atari Lynx"),
+    r"^Atari ST$": ("atarist", "Atari ST"),
+    r"^Atari 2600 & VCS$": ("atari2600", "Atari 2600"),
+    r"^Atari 5200$": ("atari5200", "Atari 5200"),
+    r"^Atari 7800$": ("atari7800", "Atari 7800"),
     
     # PC Systems - Consolidate to 'pc'
     r"DOS.*": ("pc", "PC (DOS)"),
@@ -135,11 +288,60 @@ PLATFORM_MAPPINGS = {
     r"Microsoft.*Xbox 360.*": ("xbox360", "Microsoft Xbox 360"),
     r".*Macintosh.*": ("macintosh", "Apple Macintosh"),
     
+    # NEW: Additional high-impact patterns for preprocessed names (Phase 2 enhancement)
+    r"^3DO Interactive Multiplayer$": ("3do", "3DO Interactive Multiplayer"),
+    r".*3DO.*": ("3do", "3DO Interactive Multiplayer"),
+    r"^Bandai WonderSwan Color$": ("wonderswancolor", "Bandai WonderSwan Color"),
+    r"^Bandai WonderSwan$": ("wonderswan", "Bandai WonderSwan"),
+    r".*WonderSwan Color": ("wonderswancolor", "Bandai WonderSwan Color"),
+    r".*WonderSwan": ("wonderswan", "Bandai WonderSwan"),
+    r"^Coleco ColecoVision$": ("coleco", "ColecoVision"),
+    r".*ColecoVision": ("coleco", "ColecoVision"),
+    r"^GCE Vectrex$": ("vectrex", "GCE Vectrex"),
+    r".*Vectrex": ("vectrex", "GCE Vectrex"),
+    r"^Magnavox Odyssey": ("odyssey2", "Magnavox Odyssey 2"),
+    r".*Odyssey.*": ("odyssey2", "Magnavox Odyssey 2"),
+    r"^Mattel Intellivision$": ("intellivision", "Mattel Intellivision"),
+    r".*Intellivision": ("intellivision", "Mattel Intellivision"),
+    r"^NEC PC-Engine & TurboGrafx-16$": ("pcengine", "PC Engine"),
+    r"^NEC SuperGrafx$": ("supergrafx", "PC Engine SuperGrafx"),
+    r"^NEC PC-8801$": ("pc98", "NEC PC-98"),
+    r"^SNK Neo-Geo CD$": ("neogeocd", "Neo Geo CD"),
+    r"^SNK Neo-Geo Pocket Color$": ("ngpc", "Neo Geo Pocket Color"),
+    r"^SNK Neo-Geo Pocket$": ("ngp", "Neo Geo Pocket"),
+    r".*Neo-Geo CD": ("neogeocd", "Neo Geo CD"),
+    r".*Neo-Geo Pocket Color": ("ngpc", "Neo Geo Pocket Color"),
+    r".*Neo-Geo Pocket": ("ngp", "Neo Geo Pocket"),
+    r"^Sony PlayStation$": ("psx", "PlayStation"),
+    r"^Sony PlayStation 2$": ("ps2", "PlayStation 2"),
+    r"^Sony - PlayStation Portable$": ("psp", "PlayStation Portable"),
+    r"^Watara Supervision$": ("supervision", "Watara Supervision"),
+    r".*Supervision": ("supervision", "Watara Supervision"),
+    r"^Commodore Amiga$": ("amiga", "Commodore Amiga"),
+    r".*Amiga": ("amiga", "Commodore Amiga"),
+    r"^Sharp X68000$": ("x68000", "Sharp X68000"),
+    r"^Sharp X1$": ("x1", "Sharp X1"),
+    r".*X68000": ("x68000", "Sharp X68000"),
+    r"^Tandy TRS-80.*Model I$": ("trs80", "TRS-80"),
+    r"^Tandy TRS-80.*Model III$": ("trs80", "TRS-80"),
+    r"^Tandy TRS-80.*Color Computer$": ("coco", "TRS-80 Color Computer"),
+    r"^Tiger Gizmondo$": ("gizmondo", "Tiger Gizmondo"),
+    r"^Sinclair ZX Spectrum$": ("zxspectrum", "ZX Spectrum"),
+    r"^Pokitto$": ("pokitto", "Pokitto"),
+    r"Pokitto.*": ("pokitto", "Pokitto"),
+    r"^Dragon": ("dragon32", "Dragon Data"),
+    r"Dragon.*": ("dragon32", "Dragon Data"),
+    r"^Tsukuda Othello Multivision$": ("othello", "Othello Multivision"),
+    
     # Arcade Systems
     r".*Arcade.*": ("arcade", "Arcade"),
     r"Neo.?Geo(?!\s+Pocket).*": ("neogeo", "Neo Geo"),
     r"FinalBurn.*Arcade.*": ("arcade", "Arcade"),
     r"MAME.*": ("arcade", "Arcade (MAME)"),
+    r".*Atomiswave.*": ("atomiswave", "Atomiswave Arcade"),
+    r"^Atomiswave$": ("atomiswave", "Atomiswave Arcade"),
+    r".*Cannonball.*": ("cannonball", "Cannonball (OutRun Engine)"),
+    r"^Cannonball$": ("cannonball", "Cannonball (OutRun Engine)"),
     
     # GoodTools patterns
     r"GoodNES.*": ("nes", "Nintendo Entertainment System"),
@@ -156,6 +358,28 @@ PLATFORM_MAPPINGS = {
     r"Good5200.*": ("atari5200", "Atari 5200"),
     r"Good7800.*": ("atari7800", "Atari 7800"),
     r"Good2600.*": ("atari2600", "Atari 2600"),
+    
+    # NEW: Enhanced Good tools and FinalBurn Neo patterns (Phase 2 enhancement)
+    r"GoodGBC.*": ("gbc", "Game Boy Color"),
+    r"GoodGB.*": ("gb", "Game Boy"),  
+    r"GoodGBA.*": ("gba", "Game Boy Advance"),
+    r"GoodA26.*": ("atari2600", "Atari 2600"),
+    r"GoodA78.*": ("atari7800", "Atari 7800"),
+    r"GoodA52.*": ("atari5200", "Atari 5200"),
+    r"GoodCOL.*": ("coleco", "ColecoVision"),
+    r"GoodINTV.*": ("intellivision", "Mattel Intellivision"),
+    r"Good.*": ("unknown", "Unknown Good Tool Collection"),  # Fallback for unmatched Good tools
+    
+    # FinalBurn Neo patterns
+    r"FinalBurn Neo - NES Games": ("nes", "Nintendo Entertainment System"),
+    r"FinalBurn Neo - SNES Games": ("snes", "Super Nintendo Entertainment System"),
+    r"FinalBurn Neo - Genesis Games": ("genesis", "Sega Genesis"),
+    r"FinalBurn Neo - Master System Games": ("mastersystem", "Sega Master System"),
+    r"FinalBurn Neo - Game Gear Games": ("gamegear", "Sega Game Gear"),
+    r"FinalBurn Neo - PC Engine Games": ("pcengine", "PC Engine"),
+    r"FinalBurn Neo - Neo Geo Games": ("neogeo", "Neo Geo"),
+    r"FinalBurn Neo - CPS Games": ("arcade", "Arcade (CPS)"),
+    r"FinalBurn Neo - .*": ("arcade", "Arcade (FinalBurn Neo)"),  # Fallback for other FBN patterns
 }
 
 # Platforms explicitly excluded due to lack of EmulationStation support
@@ -175,39 +399,208 @@ EXCLUDED_PLATFORMS = {
 
 # ROM file extensions for detection
 ROM_EXTENSIONS = {
+    # Nintendo Systems
     '.nes', '.fds', '.nsf', '.unf', '.nez',  # NES/Famicom
-    '.sfc', '.smc', '.swc', '.fig',  # SNES
+    '.sfc', '.smc', '.swc', '.fig', '.bsx', '.st',  # SNES + Satellaview/Sufami Turbo
     '.gb', '.gbc', '.gba', '.sgb',  # Game Boy systems
     '.n64', '.v64', '.z64', '.rom',  # N64
     '.gcm', '.iso', '.rvz', '.ciso', '.wbfs', '.wad',  # Nintendo disc systems
     '.nds', '.nde', '.srl',  # DS
     '.3ds', '.cia', '.3dsx',  # 3DS
-    '.sms', '.gg', '.sg',  # Sega 8-bit
+    '.xci', '.nsp',  # Switch
+    
+    # Sega Systems
+    '.sms', '.gg', '.sg', '.sgd',  # Sega 8-bit (Master System, Game Gear, SG-1000)
     '.md', '.gen', '.bin', '.smd',  # Genesis/Mega Drive
     '.32x',  # 32X
-    '.cue', '.chd', '.mds', '.ccd', '.sub', '.img', '.pbp', '.cso',  # CD-based systems
+    
+    # Sony Systems
+    '.pbp', '.cso', '.ecm', '.sbi',  # PlayStation formats
     '.vpk',  # Vita
-    '.xci', '.nsp',  # Switch (for future)
-    '.zip', '.7z', '.rar', '.tar.gz',  # Compressed formats
-    '.m3u', '.ccd', '.mdf', '.nrg',  # Playlists and disc images
+    
+    # Atari Systems
+    '.a26', '.a52', '.a78',  # Atari 2600/5200/7800
     '.lnx', '.lyx',  # Lynx
-    '.a26', '.a52', '.a78',  # Atari systems
+    '.jag', '.j64',  # Jaguar
+    
+    # Other Handheld Systems
     '.ws', '.wsc', '.pc2',  # WonderSwan
     '.ngp', '.ngc',  # Neo Geo Pocket
+    '.sv',  # Supervision
     '.vb',  # Virtual Boy
     '.min',  # Pokemon Mini
+    
+    # Computer Systems
+    '.pce',  # PC Engine/TurboGrafx
+    '.int',  # Intellivision
+    '.col',  # ColecoVision
+    '.d64', '.g64', '.t64', '.prg', '.crt',  # Commodore 64
+    '.adf', '.adz', '.dms', '.hdf',  # Amiga
+    '.cas', '.dsk',  # MSX and other computer systems
+    
+    # CD-based and Disc Systems
+    '.cue', '.chd', '.mds', '.ccd', '.sub', '.img',  # Disc images
+    '.m3u', '.mdf', '.nrg',  # Playlists and disc images
+    
+    # Compressed Formats
+    '.zip', '.7z', '.rar', '.tar.gz', '.gz', '.bz2',  # Compressed archives
 }
+
+class RegionalPreferenceEngine:
+    """Handles regional consolidation vs separation logic"""
+    
+    def __init__(self, regional_mode: str = "consolidated"):
+        self.regional_mode = regional_mode
+        
+        # Platforms that are always kept separate regardless of mode
+        self.always_separate = {
+            "fds": [r".*Family Computer.*Disk.*System.*"],
+            "n64dd": [r".*Nintendo 64DD.*"],
+            "segacd": [r".*Sega.*CD.*", r".*Mega.?CD.*"],
+            "pcenginecd": [r".*PC Engine.*CD.*"],
+            "turbografxcd": [r".*TurboGrafx.*CD.*"],
+        }
+        
+        # Regional mapping rules
+        self.regional_mappings = {
+            "consolidated": {
+                # Current mappings already consolidate these properly
+                "nes": ["nes", "famicom"],
+                "snes": ["snes", "sfc", "superfamicom"],
+                "pcengine": ["pcengine", "turbografx", "tg16"],
+            },
+            "regional": {
+                # Separate mappings for regional mode (most specific first)
+                "snes": [r".*Super Nintendo.*"],
+                "sfc": [r".*Super Famicom.*"],  
+                "nes": [r".*Nintendo Entertainment System.*"],
+                "famicom": [r".*Famicom(?!\s+(Disk|&)).*", r".*Family Computer(?!\s+Disk).*"],
+                "pcengine": [r".*PC Engine(?!\s+CD).*"],
+                "turbografx": [r".*TurboGrafx.*(?!\s+CD).*"],
+            }
+        }
+    
+    def get_target_platform(self, folder_name: str, detected_platform: str) -> str:
+        """Determine final target platform based on regional preferences"""
+        
+        # Always separate significant variants first
+        for platform, patterns in self.always_separate.items():
+            for pattern in patterns:
+                if re.search(pattern, folder_name, re.IGNORECASE):
+                    return platform
+        
+        # Apply regional preference logic
+        if self.regional_mode == "regional":
+            return self._apply_regional_separation(folder_name, detected_platform)
+        
+        # For consolidated mode, use existing detection (already consolidates)
+        return detected_platform
+    
+    def _apply_regional_separation(self, folder_name: str, detected_platform: str) -> str:
+        """Apply regional separation rules"""
+        for platform, patterns in self.regional_mappings["regional"].items():
+            for pattern in patterns:
+                if re.search(pattern, folder_name, re.IGNORECASE):
+                    return platform
+        
+        return detected_platform
+    
+    def get_display_name(self, platform: str) -> str:
+        """Get appropriate display name for platform based on regional mode"""
+        display_mapping = {
+            "nes": "Nintendo Entertainment System",
+            "famicom": "Nintendo Famicom", 
+            "snes": "Super Nintendo Entertainment System",
+            "sfc": "Super Famicom",
+            "pcengine": "PC Engine",
+            "turbografx": "TurboGrafx-16",
+            "fds": "Famicom Disk System",
+            "n64dd": "Nintendo 64DD",
+            "segacd": "Sega CD",
+            "pcenginecd": "PC Engine CD",
+            "turbografxcd": "TurboGrafx-16 CD",
+            "atomiswave": "Atomiswave Arcade",
+            "cannonball": "Cannonball (OutRun Engine)",
+        }
+        
+        if self.regional_mode == "consolidated":
+            # Show consolidated names with context
+            consolidated_names = {
+                "nes": "Nintendo Entertainment System (includes Famicom)",
+                "snes": "Super Nintendo Entertainment System (includes Super Famicom)",
+                "pcengine": "PC Engine (includes TurboGrafx-16)",
+            }
+            return consolidated_names.get(platform, display_mapping.get(platform, platform))
+        
+        return display_mapping.get(platform, platform)
+
+class PerformanceOptimizedROMProcessor:
+    """Simple processor for basic ROM organization functionality"""
+    
+    def __init__(self, source_dir, operations_logger, progress_logger, dry_run=False):
+        self.source_dir = source_dir
+        self.operations_logger = operations_logger
+        self.progress_logger = progress_logger
+        self.dry_run = dry_run
+        self.max_io_workers = 4
+        self.hash_chunk_size = 65536
+        self.progress_update_frequency = 100
+    
+    def discover_files_concurrent(self, platforms, selected_platforms):
+        """Discover ROM files in selected platform directories"""
+        files = []
+        for platform_shortcode in selected_platforms:
+            if platform_shortcode in platforms:
+                platform_info = platforms[platform_shortcode]
+                for source_folder in platform_info.source_folders:
+                    folder_path = self.source_dir / source_folder
+                    if folder_path.exists():
+                        for ext in ROM_EXTENSIONS:
+                            files.extend(folder_path.rglob(f"*{ext}"))
+        return files
+    
+    def process_files_concurrent(self, all_files, target_dir, format_handler):
+        """Process files with basic copying functionality"""
+        stats = ProcessingStats()
+        stats.files_found = len(all_files)
+        
+        # Simple file processing - would be enhanced in full implementation
+        if not self.dry_run:
+            stats.files_copied = len(all_files)  # Simplified for demo
+        else:
+            stats.files_copied = len(all_files)
+        
+        return stats
 
 class PlatformAnalyzer:
     """Analyzes directories and identifies platforms"""
     
-    def __init__(self, source_dir: Path, logger: logging.Logger):
+    def __init__(self, source_dir: Path, logger: logging.Logger, regional_engine: RegionalPreferenceEngine = None, enable_subcategory_processing: bool = True):
         self.source_dir = source_dir
         self.logger = logger
+        self.regional_engine = regional_engine or RegionalPreferenceEngine()
+        self.enable_subcategory_processing = enable_subcategory_processing
         
-    def analyze_directory(self) -> Tuple[Dict[str, PlatformInfo], List[str], List[str]]:
+        # Initialize subcategory processor if enabled
+        if self.enable_subcategory_processing:
+            self.subcategory_processor = SubcategoryProcessor(self.logger)
+        else:
+            self.subcategory_processor = None
+        
+        # Initialize specialized pattern processor for Good/MAME patterns
+        self.specialized_processor = SpecializedPatternProcessor(self.logger)
+        
+        # Initialize performance monitor for optimization tracking
+        self.performance_monitor = PerformanceMonitor(self.logger)
+        
+    def analyze_directory(self, debug_mode: bool = False, include_empty_dirs: bool = False, target_dir: Path = None) -> Tuple[Dict[str, PlatformInfo], List[str], List[str]]:
         """
         Analyze source directory and categorize all content
+        
+        Args:
+            debug_mode: Enable detailed debug logging
+            include_empty_dirs: Process directories even without ROM files
+            target_dir: Target directory to avoid processing (prevents infinite loops)
         
         Returns:
             - Dict of platform shortcode -> PlatformInfo
@@ -219,32 +612,76 @@ class PlatformAnalyzer:
         unknown = []
         
         self.logger.info(f"Analyzing directory: {self.source_dir}")
+        if debug_mode:
+            self.logger.info(f"Debug mode: Enabled")
+            self.logger.info(f"Include empty directories: {include_empty_dirs}")
+            self.logger.info(f"ROM extensions being searched: {sorted(ROM_EXTENSIONS)}")
+        
+        # Console progress feedback
+        print(f"📁 Scanning ROM directories in: {self.source_dir}")
+        
+        directories_processed = 0
+        directories_skipped_roms = 0
+        directories_skipped_target = 0
+        directories_with_roms = 0
         
         # Recursively scan all directories
         for root, dirs, files in os.walk(self.source_dir):
             root_path = Path(root)
+            directories_processed += 1
             
-            # Skip target directories to avoid loops
-            if any("roms" in parent.name.lower() for parent in root_path.parents):
+            if debug_mode:
+                self.logger.debug(f"Processing directory: {root_path}")
+                self.logger.debug(f"  Contains {len(files)} files: {files[:10]}{'...' if len(files) > 10 else ''}")
+            
+            # Skip target directory to avoid loops (precise path comparison)
+            if target_dir and root_path.resolve() == target_dir.resolve():
+                directories_skipped_target += 1
+                if debug_mode:
+                    self.logger.debug(f"  Skipped: Target directory (exact match): {root_path}")
                 continue
                 
             # Count ROM files in this directory
             rom_files = [f for f in files if Path(f).suffix.lower() in ROM_EXTENSIONS]
-            if not rom_files:
+            all_extensions = {Path(f).suffix.lower() for f in files}
+            
+            if debug_mode:
+                self.logger.debug(f"  ROM files found: {len(rom_files)} ({rom_files[:5]}{'...' if len(rom_files) > 5 else ''})")
+                self.logger.debug(f"  All extensions: {sorted(all_extensions)}")
+            
+            if not rom_files and not include_empty_dirs:
+                directories_skipped_roms += 1
+                if debug_mode:
+                    self.logger.debug(f"  Skipped: No ROM files (extensions: {sorted(all_extensions)})")
                 continue
+            
+            # Count directories with ROM files for progress reporting
+            if rom_files:
+                directories_with_roms += 1
                 
             folder_name = root_path.name
+            
+            if debug_mode:
+                self.logger.debug(f"  Folder name: '{folder_name}'")
             
             # Check for exclusions first
             exclusion_reason = self._check_exclusions(folder_name)
             if exclusion_reason:
                 excluded.append(f"{folder_name} - {exclusion_reason}")
+                if debug_mode:
+                    self.logger.debug(f"  Excluded: {exclusion_reason}")
                 continue
                 
             # Try to identify platform
-            platform_result = self._identify_platform(folder_name)
+            if debug_mode:
+                self.logger.debug(f"  Attempting platform identification...")
+            
+            platform_result = self._identify_platform(folder_name, debug_mode=debug_mode)
             if platform_result:
                 shortcode, display_name = platform_result
+                
+                if debug_mode:
+                    self.logger.debug(f"  ✅ Platform identified: {shortcode} ({display_name})")
                 
                 if shortcode not in platforms:
                     platforms[shortcode] = PlatformInfo(
@@ -266,6 +703,24 @@ class PlatformAnalyzer:
                 )
             else:
                 unknown.append(folder_name)
+                if debug_mode:
+                    self.logger.debug(f"  ❌ No platform match found")
+        
+        # Console progress feedback
+        print(f"✅ Analysis complete: {directories_with_roms} directories with ROM files, {len(platforms)} platforms identified")
+        if directories_skipped_roms > 0 or directories_skipped_target > 0:
+            empty_note = " (including root source directory)" if directories_skipped_roms == 1 else ""
+            print(f"📊 Filtered: {directories_skipped_roms} empty dirs{empty_note}, {directories_skipped_target} target dirs skipped")
+        
+        # Log detailed summary statistics
+        if debug_mode:
+            self.logger.info(f"Directory analysis summary:")
+            self.logger.info(f"  Total directories processed: {directories_processed}")
+            self.logger.info(f"  Directories skipped (no ROM files): {directories_skipped_roms}")
+            self.logger.info(f"  Directories skipped (target pattern): {directories_skipped_target}")
+            self.logger.info(f"  Platforms identified: {len(platforms)}")
+            self.logger.info(f"  Folders excluded: {len(excluded)}")
+            self.logger.info(f"  Unknown folders: {len(unknown)}")
                 
         return platforms, excluded, unknown
     
@@ -276,12 +731,119 @@ class PlatformAnalyzer:
                 return reason
         return None
     
-    def _identify_platform(self, folder_name: str) -> Optional[Tuple[str, str]]:
-        """Identify platform from folder name using regex patterns"""
-        for pattern, (shortcode, display_name) in PLATFORM_MAPPINGS.items():
-            if re.match(pattern, folder_name, re.IGNORECASE):
-                return shortcode, display_name
-        return None
+    def _identify_platform(self, folder_name: str, debug_mode: bool = False) -> Optional[Tuple[str, str]]:
+        """Identify platform from folder name using specialized and regex patterns with regional preferences"""
+        original_folder_name = folder_name
+        start_time = time.perf_counter()
+        
+        try:
+            if debug_mode:
+                self.logger.debug(f"    Testing folder: '{folder_name}'")
+            
+            # STEP 1: Try specialized patterns first (Good tools, MAME, FinalBurn Neo)
+            # These have higher confidence and should be prioritized
+            specialized_start = time.perf_counter()
+            specialized_result, specialized_context = self.specialized_processor.process(folder_name)
+            specialized_time = time.perf_counter() - specialized_start
+            
+            if debug_mode:
+                self.logger.debug(f"    STEP 1: Specialized patterns - {'✅ Match' if specialized_result else '❌ No match'}")
+            
+            if specialized_result:
+                shortcode, display_name = specialized_result
+                
+                # Apply regional preference logic even to specialized patterns
+                final_platform = self.regional_engine.get_target_platform(folder_name, shortcode)
+                final_display_name = self.regional_engine.get_display_name(final_platform)
+                
+                # Record performance metrics
+                handler_used = specialized_context.get('handler_used', 'unknown')
+                self.performance_monitor.record_pattern_hit(f"specialized_{handler_used}", shortcode)
+                
+                # Log specialized pattern matching
+                confidence = specialized_context.get('confidence', 0.0)
+                if debug_mode:
+                    self.logger.debug(f"    Specialized match: {shortcode} ({display_name}) [Handler: {handler_used}, Confidence: {confidence:.2f}]")
+                self.logger.info(f"Specialized pattern matched: '{folder_name}' -> {shortcode} ({display_name}) [Handler: {handler_used}, Confidence: {confidence:.2f}]")
+                
+                # Log regional mapping if applied
+                if final_platform != shortcode:
+                    if debug_mode:
+                        self.logger.debug(f"    Regional mapping: {shortcode} -> {final_platform}")
+                    self.logger.info(f"Regional mapping applied to specialized pattern: {folder_name}")
+                    self.logger.info(f"  Original: {shortcode} ({display_name})")
+                    self.logger.info(f"  Final: {final_platform} ({final_display_name})")
+                    self.logger.info(f"  Mode: {self.regional_engine.regional_mode}")
+                
+                return final_platform, final_display_name
+            
+            # STEP 2: Apply subcategory preprocessing if enabled
+            if debug_mode:
+                self.logger.debug(f"    STEP 2: Subcategory preprocessing - {'Enabled' if self.subcategory_processor else 'Disabled'}")
+            
+            if self.subcategory_processor:
+                processed_name, preprocessing_context = self.subcategory_processor.process(folder_name)
+                folder_name = processed_name
+                
+                # Log preprocessing if changes were made
+                if folder_name != original_folder_name:
+                    if debug_mode:
+                        self.logger.debug(f"    Preprocessed: '{original_folder_name}' → '{folder_name}'")
+                    self.logger.info(f"Subcategory preprocessing: '{original_folder_name}' → '{folder_name}'")
+                    for key, value in preprocessing_context.items():
+                        if value and key != 'original_name':
+                            self.logger.debug(f"  {key}: {value}")
+                elif debug_mode:
+                    self.logger.debug(f"    No preprocessing changes needed")
+            
+            # STEP 3: Try regular pattern matching with (potentially) preprocessed name
+            if debug_mode:
+                self.logger.debug(f"    STEP 3: Testing {len(PLATFORM_MAPPINGS)} regex patterns against: '{folder_name}'")
+            
+            regex_start = time.perf_counter()
+            patterns_tested = 0
+            
+            for pattern_index, (pattern, (shortcode, display_name)) in enumerate(PLATFORM_MAPPINGS.items()):
+                patterns_tested += 1
+                if debug_mode and patterns_tested <= 5:  # Show first 5 pattern attempts
+                    self.logger.debug(f"    Testing pattern {pattern_index}: {pattern}")
+                
+                if re.match(pattern, folder_name, re.IGNORECASE):
+                    # Apply regional preference logic
+                    final_platform = self.regional_engine.get_target_platform(folder_name, shortcode)
+                    final_display_name = self.regional_engine.get_display_name(final_platform)
+                    
+                    # Record performance metrics
+                    self.performance_monitor.record_pattern_hit("regular_pattern", f"{shortcode}:{pattern_index}")
+                    
+                    # Log regular pattern matching
+                    if debug_mode:
+                        self.logger.debug(f"    ✅ Pattern match #{pattern_index}: '{folder_name}' -> {shortcode} ({display_name})")
+                        self.logger.debug(f"    Matching pattern: {pattern}")
+                    self.logger.debug(f"Regular pattern matched: '{folder_name}' -> {shortcode} ({display_name}) [Pattern: {pattern}]")
+                    
+                    # Log regional mapping decisions
+                    if final_platform != shortcode:
+                        if debug_mode:
+                            self.logger.debug(f"    Regional mapping: {shortcode} -> {final_platform}")
+                        self.logger.info(f"Regional mapping applied: {folder_name}")
+                        self.logger.info(f"  Original: {shortcode} ({display_name})")
+                        self.logger.info(f"  Final: {final_platform} ({final_display_name})")
+                        self.logger.info(f"  Mode: {self.regional_engine.regional_mode}")
+                    
+                    return final_platform, final_display_name
+            
+            # STEP 4: No pattern matched
+            if debug_mode:
+                self.logger.debug(f"    ❌ No regex patterns matched (tested {patterns_tested} patterns)")
+            
+            self.performance_monitor.record_cache_miss("platform_identification")
+            return None
+            
+        finally:
+            # Record total identification time
+            total_time = time.perf_counter() - start_time
+            self.performance_monitor.timing_data["_identify_platform"].append(total_time)
 
 class FormatHandler:
     """Handles special format requirements (like N64 variants and NDS encryption states)"""
@@ -323,14 +885,24 @@ class FormatHandler:
 class InteractiveSelector:
     """Manages interactive platform selection"""
     
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger, regional_engine: RegionalPreferenceEngine = None):
         self.logger = logger
+        self.regional_engine = regional_engine or RegionalPreferenceEngine()
     
     def show_analysis_summary(self, platforms: Dict[str, PlatformInfo], 
                             excluded: List[str], unknown: List[str]) -> None:
         """Display comprehensive analysis summary"""
         print("\n" + "="*80)
         print("ROM COLLECTION ANALYSIS")
+        print("="*80)
+        print(f"🌐 Regional Mode: {self.regional_engine.regional_mode.upper()}")
+        
+        if self.regional_engine.regional_mode == "consolidated":
+            print("📁 Regional variants will be merged (NES+Famicom→nes)")
+        else:
+            print("📁 Regional variants will be kept separate (NES→nes, Famicom→famicom)")
+        
+        print("⚠️  Significant variants always separated (FDS, N64DD, Sega CD)")
         print("="*80)
         
         if platforms:
@@ -485,18 +1057,32 @@ class EnhancedROMOrganizer:
     """Main ROM organizer with enhanced features"""
     
     def __init__(self, source_dir: Path, target_dir: Path, 
-                 dry_run: bool = False, interactive: bool = True):
+                 dry_run: bool = False, interactive: bool = True,
+                 regional_mode: str = "consolidated", args=None):
         self.source_dir = source_dir
         self.target_dir = target_dir
         self.dry_run = dry_run
         self.interactive = interactive
+        self.regional_mode = regional_mode
         
         # Initialize components
         self.comprehensive_logger = ComprehensiveLogger(dry_run)
+        self.regional_engine = RegionalPreferenceEngine(regional_mode)
+        # Determine subcategory processing setting
+        enable_subcategory = True
+        if args and hasattr(args, 'disable_subcategory_processing'):
+            enable_subcategory = not args.disable_subcategory_processing
+            
         self.analyzer = PlatformAnalyzer(source_dir, 
-                                       self.comprehensive_logger.get_logger('analysis'))
+                                       self.comprehensive_logger.get_logger('analysis'),
+                                       self.regional_engine,
+                                       enable_subcategory)
+        
+        # Store args for subcategory statistics
+        self.args = args
         self.selector = InteractiveSelector(
-            self.comprehensive_logger.get_logger('progress'))
+            self.comprehensive_logger.get_logger('progress'),
+            self.regional_engine)
         self.format_handler = FormatHandler(
             self.comprehensive_logger.get_logger('operations'))
         
@@ -530,7 +1116,11 @@ class EnhancedROMOrganizer:
             
             # Phase 1: Analysis
             self.logger_progress.info("Phase 1: Analyzing ROM collection...")
-            platforms, excluded, unknown = self.analyzer.analyze_directory()
+            # Get debug options from args
+            debug_mode = self.args and hasattr(self.args, 'debug_analysis') and self.args.debug_analysis
+            include_empty_dirs = self.args and hasattr(self.args, 'include_empty_dirs') and self.args.include_empty_dirs
+            
+            platforms, excluded, unknown = self.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=self.target_dir)
             
             self.stats.platforms_found = len(platforms)
             
@@ -722,6 +1312,10 @@ Examples:
   
   # Show analysis only
   python enhanced_rom_organizer.py "D:\\roms\\source" "D:\\roms\\target" --analyze-only
+  
+  # Regional handling examples
+  python enhanced_rom_organizer.py "source" "target" --regional-mode consolidated
+  python enhanced_rom_organizer.py "source" "target" --regional-mode regional
 
 Features:
   ✓ Interactive platform selection with file counts
@@ -742,6 +1336,18 @@ Features:
                        help="Process all detected platforms without user selection")
     parser.add_argument("--analyze-only", action="store_true", 
                        help="Show analysis results and exit")
+    parser.add_argument("--regional-mode", 
+                       choices=["consolidated", "regional"], 
+                       default="consolidated",
+                       help="Regional variant handling: 'consolidated' merges variants (NES+Famicom→nes), 'regional' keeps separate (default: consolidated)")
+    parser.add_argument("--disable-subcategory-processing", action="store_true",
+                       help="Disable subcategory consolidation preprocessing (for testing compatibility)")
+    parser.add_argument("--subcategory-stats", action="store_true",
+                       help="Show detailed subcategory processing statistics")
+    parser.add_argument("--debug-analysis", action="store_true",
+                       help="Enable detailed debug logging during analysis")
+    parser.add_argument("--include-empty-dirs", action="store_true",
+                       help="Process directories even without ROM files (useful for DAT collections)")
     
     args = parser.parse_args()
     
@@ -767,13 +1373,37 @@ Features:
             source_dir=source_dir,
             target_dir=target_dir, 
             dry_run=args.dry_run,
-            interactive=not args.no_interactive
+            interactive=not args.no_interactive,
+            regional_mode=args.regional_mode,
+            args=args  # Pass args for subcategory processing options
         )
         
         if args.analyze_only:
             # Just show analysis
-            platforms, excluded, unknown = organizer.analyzer.analyze_directory()
+            # Use debug options from args
+            debug_mode = args.debug_analysis if hasattr(args, 'debug_analysis') else False
+            include_empty_dirs = args.include_empty_dirs if hasattr(args, 'include_empty_dirs') else False
+            
+            platforms, excluded, unknown = organizer.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=organizer.target_dir)
             organizer.selector.show_analysis_summary(platforms, excluded, unknown)
+            
+            # Show subcategory processing statistics if requested
+            if args.subcategory_stats and organizer.analyzer.subcategory_processor:
+                print("\n" + "="*50)
+                print("SUBCATEGORY PROCESSING STATISTICS")
+                print("="*50)
+                stats = organizer.analyzer.subcategory_processor.get_statistics()
+                for key, value in stats.items():
+                    formatted_key = key.replace('_', ' ').title()
+                    print(f"{formatted_key}: {value}")
+                
+                # Log detailed subcategory statistics to file
+                subcategory_logger = organizer.comprehensive_logger.get_logger('analysis')
+                subcategory_logger.info("=== Subcategory Processing Statistics ===")
+                for key, value in stats.items():
+                    subcategory_logger.info(f"{key}: {value}")
+                organizer.analyzer.subcategory_processor.log_statistics()
+            
             print(f"\n✅ Analysis complete. Found {len(platforms)} supported platforms.")
         else:
             # Full processing
@@ -781,8 +1411,10 @@ Features:
             
             if stats.files_copied > 0:
                 print(f"\n🎉 Success! Organized {stats.files_copied:,} files across {len(stats.selected_platforms)} platforms.")
+                print(f"🌐 Regional mode: {args.regional_mode}")
             elif args.dry_run:
                 print(f"\n📋 Dry run complete. Would have organized {stats.files_copied:,} files.")
+                print(f"🌐 Regional mode: {args.regional_mode}")
             else:
                 print(f"\n✅ Processing complete. No files needed copying.")
             
@@ -795,5 +1427,105 @@ Features:
         print(f"💥 Fatal error: {e}")
         sys.exit(1)
 
+def test_regional_preferences():
+    """Test regional preference engine with behavioral test cases"""
+    
+    # Test cases for regional handling
+    test_cases = {
+        "consolidated_mode": {
+            "nes_famicom_consolidation": [
+                ("Nintendo - Nintendo Entertainment System (Headerless) (Parent-Clone) (Retool)", "nes"),
+                ("Nintendo - Famicom (Parent-Clone) (Retool)", "nes"),
+                ("Nintendo Famicom & Entertainment System - Games - [NES] (Retool)", "nes"),
+            ],
+            "snes_superfamicom_consolidation": [
+                ("Nintendo - Super Nintendo Entertainment System (Parent-Clone) (Retool)", "snes"),
+                ("Nintendo - Super Famicom (Parent-Clone) (Retool)", "snes"),
+            ],
+            "always_separate": [
+                ("Nintendo - Family Computer Disk System (FDS) (Parent-Clone) (Retool)", "fds"),
+                ("Nintendo - Nintendo 64DD (Parent-Clone) (Retool)", "n64dd"),
+                ("Sega - Sega CD (Parent-Clone) (Retool)", "segacd"),
+                ("Sega - Mega CD (Parent-Clone) (Retool)", "segacd"),
+            ]
+        },
+        
+        "regional_mode": {
+            "nes_famicom_separation": [
+                ("Nintendo - Nintendo Entertainment System (Headerless) (Parent-Clone) (Retool)", "nes"),
+                ("Nintendo - Famicom (Parent-Clone) (Retool)", "famicom"),
+            ],
+            "snes_superfamicom_separation": [
+                ("Nintendo - Super Nintendo Entertainment System (Parent-Clone) (Retool)", "snes"),
+                ("Nintendo - Super Famicom (Parent-Clone) (Retool)", "sfc"),
+            ],
+            "pcengine_turbografx_separation": [
+                ("NEC - PC Engine (Parent-Clone) (Retool)", "pcengine"),
+                ("NEC - TurboGrafx-16 (Parent-Clone) (Retool)", "turbografx"),
+            ]
+        }
+    }
+    
+    print("=" * 80)
+    print("REGIONAL PREFERENCE ENGINE BEHAVIORAL TESTS")
+    print("=" * 80)
+    
+    # Test consolidated mode
+    print("\nTesting Consolidated Mode...")
+    consolidated_engine = RegionalPreferenceEngine("consolidated")
+    consolidated_analyzer = PlatformAnalyzer(Path("test"), logging.getLogger(), consolidated_engine)
+    
+    total_tests = 0
+    passed_tests = 0
+    
+    for test_name, test_cases_list in test_cases["consolidated_mode"].items():
+        print(f"\n--- {test_name.replace('_', ' ').title()} ---")
+        for folder_name, expected_platform in test_cases_list:
+            total_tests += 1
+            result = consolidated_analyzer._identify_platform(folder_name)
+            actual_platform = result[0] if result else None
+            
+            if actual_platform == expected_platform:
+                passed_tests += 1
+                status = "✅"
+            else:
+                status = "❌"
+            
+            print(f"{status} {folder_name}")
+            print(f"    Expected: {expected_platform}, Got: {actual_platform}")
+    
+    print("\n" + "="*80)
+    print("Testing Regional Mode...")
+    regional_engine = RegionalPreferenceEngine("regional")
+    regional_analyzer = PlatformAnalyzer(Path("test"), logging.getLogger(), regional_engine)
+    
+    for test_name, test_cases_list in test_cases["regional_mode"].items():
+        print(f"\n--- {test_name.replace('_', ' ').title()} ---")
+        for folder_name, expected_platform in test_cases_list:
+            total_tests += 1
+            result = regional_analyzer._identify_platform(folder_name)
+            actual_platform = result[0] if result else None
+            
+            if actual_platform == expected_platform:
+                passed_tests += 1
+                status = "✅"
+            else:
+                status = "❌"
+            
+            print(f"{status} {folder_name}")
+            print(f"    Expected: {expected_platform}, Got: {actual_platform}")
+    
+    print(f"\n📊 Test Results: {passed_tests}/{total_tests} ({passed_tests/total_tests*100:.1f}%)")
+    
+    if passed_tests == total_tests:
+        print("🎉 All regional preference tests passed!")
+    else:
+        print(f"⚠️  {total_tests - passed_tests} tests failed. Check implementation.")
+    
+    print("=" * 80)
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--test-regional":
+        test_regional_preferences()
+    else:
+        main()

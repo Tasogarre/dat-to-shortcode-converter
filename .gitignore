@@ -215,6 +215,22 @@ __marimo__/
 logs/
 *.log
 
+# DAT to Shortcode Converter - Development Artifacts
+analyze_*.py
+test_*.py
+ref_*.txt
+ref_*.md
+*_plan.md
+*_guide.md
+enhanced_platform_mappings.py
+
+# Testing and Debugging Files
+test_*/
+*_test.py
+debug_*.py
+*/test_*
+test_display_names.py
+
 # Temporary Files
 temp/
 tmp/
