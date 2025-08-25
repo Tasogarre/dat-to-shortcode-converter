@@ -1314,10 +1314,14 @@ class AsyncFileCopyEngine:
         
         stats = ProcessingStats()
         
-        # Flatten files from folder structure
+        # Flatten files from folder structure and extract paths
         all_files = []
         for folder_files in files_by_folder.values():
-            all_files.extend(folder_files)
+            for file_info in folder_files:
+                if isinstance(file_info, dict):
+                    all_files.append(file_info['path'])
+                else:
+                    all_files.append(file_info)
             
         stats.files_found = len(all_files)
         
@@ -1367,15 +1371,20 @@ class AsyncFileCopyEngine:
             
             self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
             
-            for file_path in folder_files:
+            for file_info in folder_files:
                 try:
-                    source_path = Path(file_path)
+                    # Handle dict structure from _group_files_by_folder
+                    if isinstance(file_info, dict):
+                        source_path = Path(file_info['path'])
+                        platform_shortcode = file_info['platform']
+                        source_folder_name = source_path.parent.name
+                    else:
+                        source_path = Path(file_info)
+                        platform_shortcode = None
+                        source_folder_name = None
                     
-                    # Find platform for this file
-                    platform_shortcode = None
-                    source_folder_name = None
-                    
-                    if platforms:
+                    # If platform wasn't found in dict, fall back to detection logic
+                    if not platform_shortcode and platforms:
                         # Find which platform this file belongs to
                         for platform_code, platform_info in platforms.items():
                             for source_folder in platform_info.source_folders:
@@ -1421,7 +1430,7 @@ class AsyncFileCopyEngine:
                         
                 except Exception as e:
                     folder_errors += 1
-                    self.errors_logger.error(f"Error processing {file_path}: {str(e)}")
+                    self.errors_logger.error(f"Error processing {source_path}: {str(e)}")
                 
                 finally:
                     # Update global counters thread-safely
