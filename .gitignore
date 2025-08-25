@@ -228,6 +228,9 @@ test_target/
 roms-source/
 roms-target/
 
+# Local Issues Register - Development tracking (not GitHub issues)
+.issues/
+
 # Task Documentation - Keep for project continuity
 # .claude/tasks/ - KEEP for development history
 

@@ -368,63 +368,85 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 - `atomiswave` → "Atomiswave Arcade"
 - `cannonball` → "Cannonball (OutRun Engine)"
 
-## GitHub Issue Management
+## Issue Management: Local vs GitHub
 
-### Issue Register Files vs GitHub Issues
+### Local Issues Register vs GitHub Issues
 
-**Local Issue Register Files** (`.md` files in workspace):
-- `GITHUB_ISSUE_*.md` files serve as **research and documentation** for potential or actual issues
-- **Not all register files become GitHub issues** - some issues are resolved during development
-- Files track detailed analysis, proposed solutions, and resolution status
-- **Keep resolved issue files** for historical reference and future similar problems
+**Local Issues Register** (`.issues/LOCAL_ISSUE_*.md` files):
+- Private development tracking for technical analysis and investigation
+- Located in `.issues/` folder (ignored by Git for privacy)
+- Files named `LOCAL_ISSUE_*.md` to clarify they are internal development tracking
+- **Not all local issues become GitHub issues** - many resolved during development
+- Track detailed technical analysis, root cause investigation, and solution architecture
+- **Keep all resolved issue files** for historical reference and pattern recognition
 
-**GitHub Repository Issues** (actual issues):
+**GitHub Repository Issues** (public issue tracking):
 - Only create GitHub issues for **user-facing problems** or **unresolved critical issues**
-- Use register files as source material for comprehensive GitHub issue descriptions
+- User-focused descriptions without excessive technical details
+- Use local issues register as source material for comprehensive technical context
 - **Current Status**: Only WSL2 I/O errors issue (#2) is open - correctly reflects actual user impact
 
-### GitHub Issue Workflow
+### Issue Management Workflow
 
-1. **Research Phase**: Create local `GITHUB_ISSUE_*.md` file with detailed analysis
-2. **Assessment**: Determine if issue affects users or can be resolved quickly
-3. **GitHub Creation**: For user-facing issues, create GitHub issue using register file content
-4. **Resolution Tracking**: Update both local register file and GitHub issue with progress
-5. **Closure**: Close GitHub issue when resolved, keep local file for reference
+1. **Research Phase**: Create local `.issues/LOCAL_ISSUE_*.md` file with detailed technical analysis
+2. **Assessment**: Determine if issue affects users or can be resolved during development
+3. **GitHub Creation**: For user-facing issues, create GitHub issue with user-focused description
+4. **Parallel Tracking**: Update local register with technical details, GitHub issue with user updates  
+5. **Resolution**: Close GitHub issue when resolved, keep local file for future reference and learning
 
 ### Current Issue Status
-- **Directory Contention**: ✅ Resolved during development (never became user-facing GitHub issue)
-- **WSL2 I/O Errors**: 🚨 Active GitHub issue #2 (affects WSL2 users, requires architectural changes)
+- **Directory Contention**: ✅ Resolved during development (tracked in `.issues/LOCAL_ISSUE_DIRECTORY_CONTENTION.md`)
+- **WSL2 I/O Errors**: 🚨 Active GitHub issue #2 + detailed analysis in `.issues/LOCAL_ISSUE_WSL2_IO_ERRORS.md`
+
+### Local Issues Register Management
+```bash
+# Create new local issue tracking file
+# File: .issues/LOCAL_ISSUE_[DESCRIPTIVE_NAME].md
+# Header template:
+# # [Issue Title] - Local Development Tracking
+# **Note**: This is internal development tracking, not a public GitHub issue
+# **Status**: [Active/Resolved] | **GitHub Issue**: [None/Link if exists]
+
+# View local issues register
+ls -la .issues/
+cat .issues/LOCAL_ISSUE_*.md
+```
 
 ### GitHub Issue Commands
 ```bash
-# List all issues (open and closed)
+# List all GitHub issues (open and closed)
 gh issue list --state=all --limit=20
 
-# View specific issue details
+# View specific GitHub issue details  
 gh issue view 2
 
-# Create new issue from template
-gh issue create --title "Issue Title" --body-file GITHUB_ISSUE_*.md
+# Create new GitHub issue (use local register as reference)
+gh issue create --title "User-facing Issue Title" --body "User-focused description"
 
-# Update issue with comment
-gh issue comment 2 --body "Updated status: [details]"
+# Update GitHub issue with user-facing progress
+gh issue comment 2 --body "Updated status for users: [details]"
 
-# Close resolved issue
+# Close resolved GitHub issue
 gh issue close 2 --comment "Fixed in commit [hash]"
 ```
 
-### When to Create GitHub Issues
-✅ **CREATE GitHub Issue**:
+### When to Create GitHub Issues vs Local Tracking
+
+✅ **CREATE GitHub Issue** (public user impact):
 - User-reported problems affecting multiple users
-- Critical bugs that impact production usage
+- Critical bugs that impact production usage  
 - Architectural limitations (like WSL2) that need community awareness
 - Feature requests with significant user demand
+- Problems that require user workarounds or awareness
 
-❌ **DON'T CREATE GitHub Issue**:
+❌ **ONLY Local Issues Register** (internal development):
 - Internal development bugs caught during testing
 - Issues resolved within the same development session
 - Minor compatibility issues with simple workarounds
 - Research or investigation tasks without user impact
+- Technical debt or refactoring opportunities
+- Performance optimization research
+- Architecture exploration and analysis
 
 ## Troubleshooting Common Issues
 
