@@ -188,15 +188,22 @@ PLATFORM_MAPPINGS = {
     r"Nintendo.*Famicom(?!\s+(Disk|&)).*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Family Computer(?!\s+Disk).*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Family Computer.*Disk.*System.*": ("fds", "Famicom Disk System"),
+    r"Nintendo.*Famicom.*Disk.*System.*": ("fds", "Famicom Disk System"),
     r"Nintendo.*Game Boy(?!\s+(Color|Advance)).*": ("gb", "Game Boy"),
     r"Nintendo.*Game Boy Color.*": ("gbc", "Game Boy Color"),
     r"Nintendo.*Game Boy Advance.*": ("gba", "Game Boy Advance"),
+    r"Nintendo.*Nintendo 64DD.*": ("n64dd", "Nintendo 64DD"),
     r"Nintendo.*Nintendo 64.*": ("n64", "Nintendo 64"),
     r"Nintendo.*GameCube.*": ("gc", "GameCube"),
     r"Nintendo.*Wii(?!\s+U).*": ("wii", "Wii"),
     r"Nintendo.*Wii U.*": ("wiiu", "Wii U"),
     r"Nintendo.*Nintendo DS(?!i).*": ("nds", "Nintendo DS"),
     r"Nintendo.*Nintendo DSi.*": ("nds", "Nintendo DS"),  # Consolidate DSi into DS
+    r"NDS.*": ("nds", "Nintendo DS"),  # General NDS collections
+    r".*Nintendo DS.*": ("nds", "Nintendo DS"),  # General Nintendo DS collections
+    # General Game Boy patterns
+    r".*Game Boy(?!\s+(Color|Advance)).*": ("gb", "Game Boy"),
+    r".*GB(?!\s*C).*": ("gb", "Game Boy"),  # GB but not GBC
     r"Nintendo.*Nintendo 3DS.*": ("n3ds", "Nintendo 3DS"),
     r"Nintendo.*Virtual Boy.*": ("virtualboy", "Virtual Boy"),
     r"Nintendo.*Pokemon Mini.*": ("pokemini", "Pokemon Mini"),
@@ -216,11 +223,14 @@ PLATFORM_MAPPINGS = {
     # Sega Systems - Keep genesis and megadrive separate as requested
     r"Sega.*Master System.*": ("mastersystem", "Sega Master System"),
     r"Sega.*Mark III.*": ("mastersystem", "Sega Master System"),
-    r"Sega.*Mega Drive.*": ("megadrive", "Sega Mega Drive"),
+    r"Sega.*Mega Drive.*": ("genesis", "Sega Genesis"),  # Consolidate Mega Drive with Genesis
     r"Sega.*Genesis.*": ("genesis", "Sega Genesis"),
     r"Sega.*Game Gear.*": ("gamegear", "Sega Game Gear"),
     r"Sega.*32X.*": ("sega32x", "Sega 32X"),
     r"Sega.*Mega.?CD.*": ("segacd", "Sega CD"),
+    # General Genesis/Mega Drive patterns
+    r".*Genesis.*": ("genesis", "Sega Genesis"),
+    r".*Mega Drive.*": ("genesis", "Sega Genesis"),
     r"Sega.*Sega CD.*": ("segacd", "Sega CD"),
     r"Sega.*Saturn.*": ("saturn", "Sega Saturn"),
     r"Sega.*Dreamcast.*": ("dreamcast", "Sega Dreamcast"),
@@ -243,6 +253,10 @@ PLATFORM_MAPPINGS = {
     r"Sony.*PlayStation 4.*": ("ps4", "PlayStation 4"),
     r"Sony.*PlayStation Portable.*": ("psp", "PlayStation Portable"),
     r"Sony.*PlayStation Vita.*": ("psvita", "PlayStation Vita"),
+    # General PlayStation patterns
+    r".*PlayStation 1.*": ("psx", "PlayStation"),
+    r".*PS1.*": ("psx", "PlayStation"),
+    r".*PSX.*": ("psx", "PlayStation"),
     
     # Atari Systems
     r"Atari.*2600.*": ("atari2600", "Atari 2600"),
@@ -347,6 +361,7 @@ PLATFORM_MAPPINGS = {
     r"GoodNES.*": ("nes", "Nintendo Entertainment System"),
     r"GoodSNES.*": ("snes", "Super Nintendo Entertainment System"),
     r"GoodN64.*": ("n64", "Nintendo 64"),
+    r"N64.*": ("n64", "Nintendo 64"),  # General N64 collections
     r"GoodGen.*": ("genesis", "Sega Genesis"),
     r"GoodSMS.*": ("mastersystem", "Sega Master System"),
     r"GoodGG.*": ("gamegear", "Sega Game Gear"),
@@ -403,7 +418,7 @@ ROM_EXTENSIONS = {
     '.nes', '.fds', '.nsf', '.unf', '.nez',  # NES/Famicom
     '.sfc', '.smc', '.swc', '.fig', '.bsx', '.st',  # SNES + Satellaview/Sufami Turbo
     '.gb', '.gbc', '.gba', '.sgb',  # Game Boy systems
-    '.n64', '.v64', '.z64', '.rom',  # N64
+    '.n64', '.v64', '.z64', '.n64dd', '.rom',  # N64 (includes 64DD)
     '.gcm', '.iso', '.rvz', '.ciso', '.wbfs', '.wad',  # Nintendo disc systems
     '.nds', '.nde', '.srl',  # DS
     '.3ds', '.cia', '.3dsx',  # 3DS
@@ -454,7 +469,7 @@ class RegionalPreferenceEngine:
         
         # Platforms that are always kept separate regardless of mode
         self.always_separate = {
-            "fds": [r".*Family Computer.*Disk.*System.*"],
+            "fds": [r".*Family Computer.*Disk.*System.*", r".*Famicom.*Disk.*System.*"],
             "n64dd": [r".*Nintendo 64DD.*"],
             "segacd": [r".*Sega.*CD.*", r".*Mega.?CD.*"],
             "pcenginecd": [r".*PC Engine.*CD.*"],
@@ -629,16 +644,168 @@ class PerformanceOptimizedROMProcessor:
                             files.extend(folder_path.rglob(f"*{ext}"))
         return files
     
-    def process_files_concurrent(self, all_files, target_dir, format_handler):
-        """Process files with basic copying functionality"""
+    def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
+        """Process files with concurrent copying and real-time progress feedback"""
+        import time
+        from pathlib import Path
+        import shutil
+        from threading import Lock
+        
         stats = ProcessingStats()
         stats.files_found = len(all_files)
         
-        # Simple file processing - would be enhanced in full implementation
-        if not self.dry_run:
-            stats.files_copied = len(all_files)  # Simplified for demo
-        else:
-            stats.files_copied = len(all_files)
+        if not all_files:
+            return stats
+        
+        # Progress tracking variables
+        progress_lock = Lock()
+        files_processed = 0
+        files_copied = 0
+        files_skipped = 0
+        errors = 0
+        start_time = time.perf_counter()
+        current_file_name = ""
+        
+        def update_progress(file_name=""):
+            """Update console progress display"""
+            nonlocal current_file_name
+            if file_name:
+                current_file_name = file_name
+                
+            current_time = time.perf_counter()
+            elapsed_time = current_time - start_time
+            
+            if elapsed_time > 0:
+                files_per_sec = files_processed / elapsed_time
+                
+                if files_processed > 0:
+                    estimated_total_time = (len(all_files) * elapsed_time) / files_processed
+                    remaining_time = max(0, estimated_total_time - elapsed_time)
+                else:
+                    remaining_time = 0
+                    files_per_sec = 0
+                
+                # Progress bar
+                progress = files_processed / len(all_files) if len(all_files) > 0 else 0
+                bar_length = 40
+                filled_length = int(bar_length * progress)
+                bar = '█' * filled_length + '░' * (bar_length - filled_length)
+                
+                # Format time remaining
+                remaining_str = f"{remaining_time:.1f}s" if remaining_time < 60 else f"{remaining_time/60:.1f}m"
+                
+                # Truncate current file name if too long
+                display_file = current_file_name[-50:] if len(current_file_name) > 50 else current_file_name
+                
+                # Update same line using carriage return
+                print(f"\rProcessing: [{bar}] {files_processed}/{len(all_files)} files ({progress*100:.1f}%)", end='', flush=True)
+                print(f"\nCurrent: {display_file} | {remaining_str} remaining | {files_per_sec:.1f} files/sec", end='', flush=True)
+                # Move cursor back up to overwrite next time
+                print("\033[F", end='', flush=True)
+        
+        def process_single_file(file_path):
+            """Process a single file with proper platform detection and formatting"""
+            nonlocal files_processed, files_copied, files_skipped, errors
+            
+            try:
+                source_path = Path(file_path)
+                
+                # Find the platform this file belongs to by matching against platforms_info
+                platform_shortcode = None
+                source_folder_name = None
+                
+                if platforms_info:
+                    # Find which platform this file belongs to based on source folders
+                    for platform_code, platform_info in platforms_info.items():
+                        for source_folder in platform_info.source_folders:
+                            folder_path = Path(self.source_dir) / source_folder
+                            try:
+                                # Check if the file path is within this platform's source folder
+                                source_path.relative_to(folder_path)
+                                platform_shortcode = platform_code
+                                source_folder_name = source_folder
+                                break
+                            except ValueError:
+                                continue
+                        if platform_shortcode:
+                            break
+                
+                if not platform_shortcode:
+                    # Fallback: use parent directory as platform
+                    platform_shortcode = source_path.parent.name.lower()
+                    source_folder_name = source_path.parent.name
+                
+                # Apply regional preferences if available
+                if regional_engine:
+                    platform_shortcode = regional_engine.get_target_platform(source_folder_name or "", platform_shortcode)
+                
+                # Use FormatHandler to determine target path (handles N64, NDS subfolders)
+                if format_handler and source_folder_name:
+                    target_platform_dir = format_handler.get_target_path(platform_shortcode, source_folder_name, target_dir)
+                else:
+                    target_platform_dir = target_dir / platform_shortcode
+                
+                # Create target directory
+                target_platform_dir.mkdir(parents=True, exist_ok=True)
+                target_file_path = target_platform_dir / source_path.name
+                
+                # Update progress with current file
+                update_progress(f"{platform_shortcode}/{source_path.name}")
+                
+                # Copy file if not in dry run mode
+                if not self.dry_run:
+                    if not target_file_path.exists():
+                        shutil.copy2(source_path, target_file_path)
+                        with progress_lock:
+                            files_copied += 1
+                    else:
+                        with progress_lock:
+                            files_skipped += 1
+                            self.operations_logger.warning(f"File already exists, skipping: {target_file_path}")
+                else:
+                    # Dry run mode - just simulate
+                    with progress_lock:
+                        files_copied += 1
+                
+                # Log operation
+                self.operations_logger.info(f"{'[DRY RUN] ' if self.dry_run else ''}Copied: {source_path} -> {target_file_path}")
+                
+            except Exception as e:
+                with progress_lock:
+                    errors += 1
+                self.operations_logger.error(f"Error processing {file_path}: {str(e)}")
+                # Still update progress even on error
+                update_progress()
+            
+            finally:
+                with progress_lock:
+                    files_processed += 1
+        
+        # Process files with threading for performance
+        with ThreadPoolExecutor(max_workers=self.max_io_workers) as executor:
+            futures = [executor.submit(process_single_file, file_path) for file_path in all_files]
+            
+            # Wait for completion
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    self.operations_logger.error(f"Thread error: {str(e)}")
+                    errors += 1
+        
+        # Final progress update - clean display
+        print(f"\rProcessing: [{'█' * 40}] {files_processed}/{len(all_files)} files (100.0%)")
+        print(f"✅ Complete! Processed {files_processed} files")
+        
+        # Update stats
+        stats.files_copied = files_copied
+        stats.files_skipped_duplicate = files_skipped
+        stats.errors = errors
+        
+        # Log final statistics
+        elapsed_time = time.perf_counter() - start_time
+        self.operations_logger.info(f"Processing completed in {elapsed_time:.2f} seconds")
+        self.operations_logger.info(f"Copy rate: {files_copied / elapsed_time if elapsed_time > 0 else 0:.1f} files/second")
         
         return stats
 
@@ -782,7 +949,7 @@ class PlatformAnalyzer:
                     display_name=current.display_name,
                     folder_count=current.folder_count + 1,
                     file_count=current.file_count + len(rom_files),
-                    source_folders=current.source_folders + [str(platform_dir)]
+                    source_folders=current.source_folders + [str(platform_dir.relative_to(self.source_dir))]
                 )
             else:
                 unknown.append(folder_name)
@@ -1294,7 +1461,7 @@ class EnhancedROMOrganizer:
         # Phase 2: Concurrent file processing  
         processing_start = datetime.now()
         processing_stats = self.performance_processor.process_files_concurrent(
-            all_files, self.target_dir, self.format_handler
+            all_files, self.target_dir, self.format_handler, platforms, self.regional_engine
         )
         processing_time = (datetime.now() - processing_start).total_seconds()
         

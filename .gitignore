@@ -224,12 +224,21 @@ ref_*.md
 *_guide.md
 enhanced_platform_mappings.py
 
-# Testing and Debugging Files
+# Testing and Debugging Files - Production Testing Files Included in Repo
 test_*/
 *_test.py
 debug_*.py
 */test_*
 test_display_names.py
+
+# Test Suite Source/Target Directories (created during testing)
+test_source/
+test_target/
+roms-source/
+roms-target/
+
+# Task Documentation - Keep for project continuity
+# .claude/tasks/ - KEEP for development history
 
 # Temporary Files
 temp/
