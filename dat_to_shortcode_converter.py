@@ -645,19 +645,22 @@ class PerformanceOptimizedROMProcessor:
         return files
     
     def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
-        """Process files with concurrent copying and real-time progress feedback"""
+        """Process files with folder-level threading to eliminate directory contention"""
         import time
         from pathlib import Path
         import shutil
+        import tempfile
         from threading import Lock
+        from collections import defaultdict
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         
         stats = ProcessingStats()
         stats.files_found = len(all_files)
         
         if not all_files:
             return stats
-        
-        # Progress tracking variables
+            
+        # Progress tracking variables (thread-safe)
         progress_lock = Lock()
         files_processed = 0
         files_copied = 0
@@ -666,8 +669,16 @@ class PerformanceOptimizedROMProcessor:
         start_time = time.perf_counter()
         current_file_name = ""
         
+        # Group files by source folder to prevent directory contention
+        files_by_folder = defaultdict(list)
+        for file_path in all_files:
+            source_folder = Path(file_path).parent
+            files_by_folder[source_folder].append(file_path)
+            
+        self.operations_logger.info(f"Folder-level threading: Processing {len(files_by_folder)} folders with {len(all_files)} total files")
+        
         def update_progress(file_name=""):
-            """Update console progress display"""
+            """Thread-safe progress display"""
             nonlocal current_file_name
             if file_name:
                 current_file_name = file_name
@@ -703,97 +714,162 @@ class PerformanceOptimizedROMProcessor:
                 # Move cursor back up to overwrite next time
                 print("\033[F", end='', flush=True)
         
-        def process_single_file(file_path):
-            """Process a single file with proper platform detection and formatting"""
-            nonlocal files_processed, files_copied, files_skipped, errors
+        def copy_file_atomic(source_path, target_file_path, max_retries=3):
+            """Atomic file copy with verification and retry logic"""
+            source_path = Path(source_path)
+            target_file_path = Path(target_file_path)
             
-            try:
-                source_path = Path(file_path)
-                
-                # Find the platform this file belongs to by matching against platforms_info
-                platform_shortcode = None
-                source_folder_name = None
-                
-                if platforms_info:
-                    # Find which platform this file belongs to based on source folders
-                    for platform_code, platform_info in platforms_info.items():
-                        for source_folder in platform_info.source_folders:
-                            folder_path = Path(self.source_dir) / source_folder
-                            try:
-                                # Check if the file path is within this platform's source folder
-                                source_path.relative_to(folder_path)
-                                platform_shortcode = platform_code
-                                source_folder_name = source_folder
-                                break
-                            except ValueError:
-                                continue
-                        if platform_shortcode:
-                            break
-                
-                if not platform_shortcode:
-                    # Fallback: use parent directory as platform
-                    platform_shortcode = source_path.parent.name.lower()
-                    source_folder_name = source_path.parent.name
-                
-                # Apply regional preferences if available
-                if regional_engine:
-                    platform_shortcode = regional_engine.get_target_platform(source_folder_name or "", platform_shortcode)
-                
-                # Use FormatHandler to determine target path (handles N64, NDS subfolders)
-                if format_handler and source_folder_name:
-                    target_platform_dir = format_handler.get_target_path(platform_shortcode, source_folder_name, target_dir)
-                else:
-                    target_platform_dir = target_dir / platform_shortcode
-                
-                # Create target directory
-                target_platform_dir.mkdir(parents=True, exist_ok=True)
-                target_file_path = target_platform_dir / source_path.name
-                
-                # Update progress with current file
-                update_progress(f"{platform_shortcode}/{source_path.name}")
-                
-                # Copy file if not in dry run mode
-                if not self.dry_run:
-                    if not target_file_path.exists():
-                        shutil.copy2(source_path, target_file_path)
-                        with progress_lock:
-                            files_copied += 1
+            for attempt in range(max_retries):
+                try:
+                    # Create target directory if needed
+                    target_file_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Use temporary file for atomic copy
+                    with tempfile.NamedTemporaryFile(
+                        dir=target_file_path.parent,
+                        delete=False,
+                        suffix='.tmp'
+                    ) as temp_file:
+                        temp_path = Path(temp_file.name)
+                    
+                    # Copy to temporary file
+                    shutil.copy2(source_path, temp_path)
+                    
+                    # Verify the copy was successful (not 0-byte)
+                    if temp_path.stat().st_size == 0:
+                        temp_path.unlink(missing_ok=True)
+                        if attempt < max_retries - 1:
+                            self.operations_logger.warning(f"0-byte file detected, retrying: {source_path} (attempt {attempt + 1})")
+                            time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                            continue
+                        else:
+                            raise IOError(f"Failed to copy after {max_retries} attempts - 0-byte file: {source_path}")
+                    
+                    # Atomic rename to final destination
+                    temp_path.rename(target_file_path)
+                    return True
+                    
+                except Exception as e:
+                    # Clean up temp file on error
+                    if 'temp_path' in locals() and temp_path.exists():
+                        temp_path.unlink(missing_ok=True)
+                    
+                    if attempt < max_retries - 1:
+                        self.operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {str(e)}")
+                        time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                        continue
                     else:
-                        with progress_lock:
-                            files_skipped += 1
+                        raise e
+            
+            return False
+                        
+        def process_folder_files(folder_path, folder_files):
+            """Process all files from a single folder sequentially (eliminates directory contention)"""
+            nonlocal files_processed, files_copied, files_skipped, errors
+            folder_copied = 0
+            folder_skipped = 0 
+            folder_errors = 0
+            
+            self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
+            
+            for file_path in folder_files:
+                try:
+                    source_path = Path(file_path)
+                    
+                    # Find platform for this file
+                    platform_shortcode = None
+                    source_folder_name = None
+                    
+                    if platforms_info:
+                        # Find which platform this file belongs to
+                        for platform_code, platform_info in platforms_info.items():
+                            for source_folder in platform_info.source_folders:
+                                folder_path_check = Path(self.source_dir) / source_folder
+                                try:
+                                    source_path.relative_to(folder_path_check)
+                                    platform_shortcode = platform_code
+                                    source_folder_name = source_folder
+                                    break
+                                except ValueError:
+                                    continue
+                            if platform_shortcode:
+                                break
+                    
+                    if not platform_shortcode:
+                        platform_shortcode = source_path.parent.name.lower()
+                        source_folder_name = source_path.parent.name
+                    
+                    # Apply regional preferences
+                    if regional_engine:
+                        platform_shortcode = regional_engine.get_target_platform(source_folder_name or "", platform_shortcode)
+                    
+                    # Determine target path
+                    if format_handler and source_folder_name:
+                        target_platform_dir = format_handler.get_target_path(platform_shortcode, source_folder_name, target_dir)
+                    else:
+                        target_platform_dir = target_dir / platform_shortcode
+                    
+                    target_file_path = target_platform_dir / source_path.name
+                    
+                    # Update progress display
+                    update_progress(f"{platform_shortcode}/{source_path.name}")
+                    
+                    # Copy file atomically
+                    if not self.dry_run:
+                        if not target_file_path.exists():
+                            success = copy_file_atomic(source_path, target_file_path)
+                            if success:
+                                folder_copied += 1
+                                self.operations_logger.info(f"Successfully copied: {source_path} -> {target_file_path}")
+                            else:
+                                folder_errors += 1
+                                self.operations_logger.error(f"Failed to copy: {source_path}")
+                        else:
+                            folder_skipped += 1
                             self.operations_logger.warning(f"File already exists, skipping: {target_file_path}")
-                else:
-                    # Dry run mode - just simulate
+                    else:
+                        # Dry run mode
+                        folder_copied += 1
+                        self.operations_logger.info(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+                        
+                except Exception as e:
+                    folder_errors += 1
+                    self.operations_logger.error(f"Error processing {file_path}: {str(e)}")
+                
+                finally:
+                    # Update global counters thread-safely
                     with progress_lock:
-                        files_copied += 1
+                        files_processed += 1
+                        
+            # Update global stats for this folder
+            with progress_lock:
+                files_copied += folder_copied
+                files_skipped += folder_skipped
+                errors += folder_errors
                 
-                # Log operation
-                self.operations_logger.info(f"{'[DRY RUN] ' if self.dry_run else ''}Copied: {source_path} -> {target_file_path}")
-                
-            except Exception as e:
-                with progress_lock:
-                    errors += 1
-                self.operations_logger.error(f"Error processing {file_path}: {str(e)}")
-                # Still update progress even on error
-                update_progress()
-            
-            finally:
-                with progress_lock:
-                    files_processed += 1
+            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_skipped} skipped, {folder_errors} errors")
         
-        # Process files with threading for performance
-        with ThreadPoolExecutor(max_workers=self.max_io_workers) as executor:
-            futures = [executor.submit(process_single_file, file_path) for file_path in all_files]
+        # Process folders with one thread per folder (eliminates directory contention)
+        max_workers = min(self.max_io_workers, len(files_by_folder))
+        self.operations_logger.info(f"Using {max_workers} threads for {len(files_by_folder)} folders")
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit one folder per thread
+            futures = []
+            for folder_path, folder_files in files_by_folder.items():
+                future = executor.submit(process_folder_files, folder_path, folder_files)
+                futures.append(future)
             
-            # Wait for completion
+            # Wait for all folders to complete
             for future in as_completed(futures):
                 try:
                     future.result()
                 except Exception as e:
+                    with progress_lock:
+                        errors += 1
                     self.operations_logger.error(f"Thread error: {str(e)}")
-                    errors += 1
         
-        # Final progress update - clean display
+        # Final progress display
         print(f"\rProcessing: [{'█' * 40}] {files_processed}/{len(all_files)} files (100.0%)")
         print(f"✅ Complete! Processed {files_processed} files")
         
@@ -806,6 +882,7 @@ class PerformanceOptimizedROMProcessor:
         elapsed_time = time.perf_counter() - start_time
         self.operations_logger.info(f"Processing completed in {elapsed_time:.2f} seconds")
         self.operations_logger.info(f"Copy rate: {files_copied / elapsed_time if elapsed_time > 0 else 0:.1f} files/second")
+        self.operations_logger.info(f"Folder-level threading: Processed {len(files_by_folder)} folders with {max_workers} threads")
         
         return stats
 
