@@ -368,6 +368,64 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 - `atomiswave` → "Atomiswave Arcade"
 - `cannonball` → "Cannonball (OutRun Engine)"
 
+## GitHub Issue Management
+
+### Issue Register Files vs GitHub Issues
+
+**Local Issue Register Files** (`.md` files in workspace):
+- `GITHUB_ISSUE_*.md` files serve as **research and documentation** for potential or actual issues
+- **Not all register files become GitHub issues** - some issues are resolved during development
+- Files track detailed analysis, proposed solutions, and resolution status
+- **Keep resolved issue files** for historical reference and future similar problems
+
+**GitHub Repository Issues** (actual issues):
+- Only create GitHub issues for **user-facing problems** or **unresolved critical issues**
+- Use register files as source material for comprehensive GitHub issue descriptions
+- **Current Status**: Only WSL2 I/O errors issue (#2) is open - correctly reflects actual user impact
+
+### GitHub Issue Workflow
+
+1. **Research Phase**: Create local `GITHUB_ISSUE_*.md` file with detailed analysis
+2. **Assessment**: Determine if issue affects users or can be resolved quickly
+3. **GitHub Creation**: For user-facing issues, create GitHub issue using register file content
+4. **Resolution Tracking**: Update both local register file and GitHub issue with progress
+5. **Closure**: Close GitHub issue when resolved, keep local file for reference
+
+### Current Issue Status
+- **Directory Contention**: ✅ Resolved during development (never became user-facing GitHub issue)
+- **WSL2 I/O Errors**: 🚨 Active GitHub issue #2 (affects WSL2 users, requires architectural changes)
+
+### GitHub Issue Commands
+```bash
+# List all issues (open and closed)
+gh issue list --state=all --limit=20
+
+# View specific issue details
+gh issue view 2
+
+# Create new issue from template
+gh issue create --title "Issue Title" --body-file GITHUB_ISSUE_*.md
+
+# Update issue with comment
+gh issue comment 2 --body "Updated status: [details]"
+
+# Close resolved issue
+gh issue close 2 --comment "Fixed in commit [hash]"
+```
+
+### When to Create GitHub Issues
+✅ **CREATE GitHub Issue**:
+- User-reported problems affecting multiple users
+- Critical bugs that impact production usage
+- Architectural limitations (like WSL2) that need community awareness
+- Feature requests with significant user demand
+
+❌ **DON'T CREATE GitHub Issue**:
+- Internal development bugs caught during testing
+- Issues resolved within the same development session
+- Minor compatibility issues with simple workarounds
+- Research or investigation tasks without user impact
+
 ## Troubleshooting Common Issues
 
 ### Platform Detection Issues (Enhanced Diagnostics)
