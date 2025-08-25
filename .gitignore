@@ -214,6 +214,9 @@ __marimo__/
 # Application Generated Files
 logs/
 
+# Testing Directory - All test files and data
+.tests/
+
 # DAT to Shortcode Converter - Development Artifacts
 analyze_*.py
 test_*.py
