@@ -19,6 +19,7 @@ import hashlib
 import shutil
 import argparse
 import logging
+from logging.handlers import RotatingFileHandler
 import re
 import mmap
 import threading
@@ -826,7 +827,7 @@ class PerformanceOptimizedROMProcessor:
                             success = copy_file_atomic(source_path, target_file_path)
                             if success:
                                 folder_copied += 1
-                                self.operations_logger.info(f"Successfully copied: {source_path} -> {target_file_path}")
+                                self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
                                 self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
                             else:
                                 folder_errors += 1
@@ -839,7 +840,7 @@ class PerformanceOptimizedROMProcessor:
                     else:
                         # Dry run mode
                         folder_copied += 1
-                        self.operations_logger.info(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+                        self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
                         
                 except Exception as e:
                     folder_errors += 1
@@ -977,9 +978,10 @@ class AsyncFileCopyEngine:
         """Single-threaded processing optimized for WSL2"""
         stats = ProcessingStats()
         
-        self.operations_logger.info("Using single-threaded processing for WSL2 compatibility")
-        
         total_files = sum(len(files) for files in files_by_folder.values())
+        
+        self.operations_logger.info("Using single-threaded processing for WSL2 compatibility")
+        self.operations_logger.info(f"Processing {total_files} files across {len(files_by_folder)} folders")
         processed_files = 0
         
         for folder_path, files in files_by_folder.items():
@@ -1031,7 +1033,7 @@ class AsyncFileCopyEngine:
             return True
             
         if self.dry_run:
-            self.operations_logger.info(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+            self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
             return True
         
         retry_config = self.retry_config
@@ -1051,7 +1053,7 @@ class AsyncFileCopyEngine:
                 success = copy_file_atomic(source_path, target_file_path)
                 
                 if success:
-                    self.operations_logger.info(f"Successfully copied: {source_path} -> {target_file_path}")
+                    self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
                     self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
                     return True
                 else:
@@ -1551,8 +1553,10 @@ class ComprehensiveLogger:
             logger = logging.getLogger(log_type)
             logger.setLevel(config['level'])
             
-            # File handler
-            fh = logging.FileHandler(config['file'])
+            # File handler with rotation (10MB max, 3 backup files)
+            max_bytes = 10 * 1024 * 1024  # 10MB
+            backup_count = 3
+            fh = RotatingFileHandler(config['file'], maxBytes=max_bytes, backupCount=backup_count)
             fh.setLevel(config['level'])
             
             # Console handler for progress and errors
