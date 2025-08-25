@@ -31,34 +31,13 @@ from typing import Dict, List, Tuple, Set, Optional, NamedTuple
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 import json
-# Specialized pattern processor functionality integrated inline
+from good_pattern_handler import SpecializedPatternProcessor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 from threading import Lock
-# Subcategory processor functionality integrated inline
+from subcategory_handler import SubcategoryProcessor
 from functools import wraps
 from collections import defaultdict
-
-# Simple inline implementations for missing processors
-class SpecializedPatternProcessor:
-    """Simple specialized pattern processor for compatibility"""
-    def __init__(self, logger):
-        self.logger = logger
-    
-    def process(self, folder_name):
-        """Process folder name for specialized patterns - basic implementation"""
-        # Return no match for now - can be enhanced later if needed
-        return None, {}
-
-class SubcategoryProcessor:
-    """Simple subcategory processor for compatibility"""
-    def __init__(self, logger):
-        self.logger = logger
-    
-    def process(self, folder_name):
-        """Process folder name for subcategory consolidation - basic implementation"""
-        # Return the original folder name unchanged for now
-        return folder_name, {}
 
 
 class PerformanceMonitor:

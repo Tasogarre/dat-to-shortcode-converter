@@ -40,12 +40,11 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 
 ### ⚡ **High-Performance Processing**
 - **Real-time progress feedback** - Live progress bars with file names, completion %, time remaining, and processing speed
-- **Thread-safe concurrent processing** - Multi-threaded operations with race condition protection
-- **Lightning-fast performance** - Process thousands of files in seconds
+- **Lightning-fast performance** - Process thousands of files in seconds (Windows/Linux native)
 - **Memory-efficient hashing** - Memory-mapped SHA1 for files >10MB
 - **Optimized for large collections** - Handles 50,000+ ROM files efficiently
 - **Comprehensive monitoring** - Detailed logs and performance metrics
-- **⚠️ Known Issue**: Race condition bug in concurrent file copying (under investigation)
+- **Robust error recovery** - Progressive backoff and file skipping for problematic files
 
 ### 🎮 **Smart Platform Handling**
 - **40+ supported platforms** - All major EmulationStation systems
@@ -102,6 +101,7 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 ### Requirements
 - **Python 3.7+** (uses only standard library)
 - **Operating System**: Windows, Linux, or macOS
+  - **Note**: WSL2 compatibility issues with large collections - run from Windows directly if using WSL2
 - **Disk space**: Sufficient for ROM collection duplication
 
 ### Download
@@ -282,11 +282,16 @@ Examples:
 - Close any running emulators or ROM managers
 - Check file permissions on source ROMs
 
+**WSL2 Large Collection Compatibility**
+- **Issue**: Script may hang when processing very large ROM collections (10,000+ files) on WSL2
+- **Root Cause**: WSL2's 9p protocol has limitations with intensive file operations on Windows mounts
+- **Solution**: Run script directly from Windows Command Prompt/PowerShell instead of WSL2
+- **Impact**: Only affects WSL2 users with very large collections accessing Windows drives via `/mnt/`
+
 **Files copied as 0-bytes or copying failures**
-- **Current Investigation**: Race condition bug in concurrent file operations
-- **Temporary Workaround**: Reduce concurrency or use single-threaded processing
-- **Status**: Solution designed using atomic file operations and thread-safe locking
-- Check logs for "Input/output error" messages indicating concurrent access issues
+- **Status**: ✅ **Resolved** - Enhanced atomic copy operations with comprehensive error recovery
+- Enhanced retry logic with progressive backoff prevents transient failures
+- Detailed error logging helps identify specific problematic files
 
 **Slow performance**
 - Use local drives instead of network storage

@@ -217,26 +217,10 @@ logs/
 # Testing Directory - All test files and data
 .tests/
 
-# DAT to Shortcode Converter - Development Artifacts
-analyze_*.py
-test_*.py
-ref_*.txt
-ref_*.md
+# DAT to Shortcode Converter - Development Artifacts (legacy patterns - now moved to .tests/)
+# Most development files now organized in .tests/ directory
 *_plan.md
 *_guide.md
-enhanced_platform_mappings.py
-
-# Race Condition Analysis and Fix Implementation
-race_condition_fix.py
-thread_safe_copy_*.py
-concurrent_copy_*.py
-
-# Testing and Debugging Files - Production Testing Files Included in Repo
-test_*/
-*_test.py
-debug_*.py
-*/test_*
-test_display_names.py
 
 # Test Suite Source/Target Directories (created during testing)
 test_source/

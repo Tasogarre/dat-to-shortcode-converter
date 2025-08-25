@@ -1,9 +1,28 @@
-# Platform Support Expansion Backlog - 2025-08-24
+# Platform Support Expansion Backlog - 2025-08-25
+
+## 🚨 CRITICAL UNRESOLVED ISSUES
+
+### WSL2 Incompatibility - BLOCKING ISSUE
+**Status**: ❌ **UNRESOLVED**  
+**Priority**: P0 (Critical)  
+**Impact**: Complete failure on WSL2 systems with large file collections
+
+**Problem**: Script hangs unpredictably during file processing on WSL2 `/mnt/` paths
+**Root Cause**: WSL2's 9p protocol has fundamental limitations that cannot be overcome
+
+**Failed Fix Attempts**:
+- ❌ Threading-based timeout mechanisms  
+- ❌ Chunked processing with recovery pauses
+- ❌ Single-threaded mode with delays
+- ❌ Enhanced retry logic
+
+**Current Workaround**: Users must run from Windows directly, not WSL2
 
 ## Current Status
-- ✅ **Coverage**: 93.4% (240/257 DAT patterns)
+- ✅ **Coverage**: 93.4% (240/257 DAT patterns)  
 - ✅ **Good Tools Support**: 30 platform codes
 - ✅ **Recent Fixes**: Directory scanning bug resolved, 8 new Good Tools platforms added
+- ❌ **WSL2 Support**: CRITICAL BLOCKER - hangs unpredictably
 
 ## Medium Priority Platform Additions
 

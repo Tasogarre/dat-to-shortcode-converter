@@ -2,6 +2,24 @@
 
 For general project information, see [README.md](README.md).
 
+## 🚨 CRITICAL KNOWN ISSUES
+
+### WSL2 Incompatibility - UNRESOLVED
+**Status**: ❌ **CRITICAL BLOCKING ISSUE**  
+**Impact**: Script hangs unpredictably when processing large file collections on WSL2
+**Root Cause**: WSL2's 9p protocol has fundamental limitations that cannot be overcome in Python
+
+**Failed Mitigation Attempts:**
+- ❌ Threading-based timeout mechanisms (hangs before timeout triggers)
+- ❌ Chunked processing with recovery pauses (still hangs during chunk processing)  
+- ❌ Single-threaded mode with increased delays (hangs regardless)
+- ❌ Atomic copy operations with retry logic (9p protocol issue, not copy logic)
+
+**CRITICAL FOR DEVELOPMENT**: 
+- **DO NOT develop or test on WSL2** - Use native Windows or Linux
+- **ALL WSL2 testing will fail** with unpredictable hanging
+- This is a known limitation of WSL2's 9p filesystem protocol
+
 ## Project Overview
 
 This is a Python ROM collection management tool that converts DAT naming conventions (No-Intro, TOSEC, GoodTools, Redump) to standardized shortcode folder structures for emulation frontends like EmulationStation, RetroPie, and Batocera.
@@ -67,21 +85,19 @@ python dat_to_shortcode_converter.py <source_dir> <target_dir> [options]
 
 **Testing commands:**
 ```bash
-# ✅ COMPREHENSIVE VALIDATION SUITE (100% success rate)
-python test_comprehensive_validation.py
-
-# Individual validation components
-python test_phase2_patterns.py                    # Pattern matching validation
-python analyze_enhanced_coverage.py               # Coverage analysis 
-python test_console_variants.py                   # Console variant handling
-python test_regional_separation.py                # Regional logic testing
-python test_n64_formats.py                        # N64 format detection
-python test_nds_formats.py                        # NDS encryption handling
+# All test files now organized in .tests/ directory
+# ✅ COMPREHENSIVE VALIDATION SUITE (available in .tests/scripts/)
+# Individual validation components moved to .tests/scripts/
 
 # Production usage patterns
 python dat_to_shortcode_converter.py "source" "target" --analyze-only --debug-analysis
 python dat_to_shortcode_converter.py "source" "target" --dry-run
 python dat_to_shortcode_converter.py "source" "target" --no-interactive
+
+# ⚠️ WSL2 WARNING - DO NOT RUN THESE COMMANDS ON WSL2 (WILL HANG)
+# python dat_to_shortcode_converter.py "/mnt/e/ROMs" "/mnt/e/Organized" --debug  # FAILS ON WSL2
+# Use Windows Command Prompt instead:
+# python dat_to_shortcode_converter.py "E:\ROMs" "E:\Organized" --debug
 
 # Performance and debugging
 python dat_to_shortcode_converter.py "source" "target" --subcategory-stats
