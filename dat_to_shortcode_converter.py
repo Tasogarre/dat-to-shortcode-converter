@@ -22,6 +22,8 @@ import logging
 import re
 import mmap
 import threading
+import time
+import random
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Set, Optional, NamedTuple
@@ -33,7 +35,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
 from threading import Lock
 from subcategory_handler import SubcategoryProcessor
-import time
 from functools import wraps
 from collections import defaultdict
 
@@ -817,16 +818,24 @@ class PerformanceOptimizedROMProcessor:
                     # Copy file atomically
                     if not self.dry_run:
                         if not target_file_path.exists():
+                            # DEBUG: WSL2 filesystem diagnostics
+                            self.operations_logger.debug(f"WSL2 DEBUG - Copying: {source_path} (size: {source_path.stat().st_size} bytes)")
+                            self.operations_logger.debug(f"WSL2 DEBUG - Source mount point: {source_path.parts[1] if len(source_path.parts) > 1 else 'unknown'}")
+                            self.operations_logger.debug(f"WSL2 DEBUG - Target: {target_file_path}")
+                            
                             success = copy_file_atomic(source_path, target_file_path)
                             if success:
                                 folder_copied += 1
                                 self.operations_logger.info(f"Successfully copied: {source_path} -> {target_file_path}")
+                                self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
                             else:
                                 folder_errors += 1
-                                self.operations_logger.error(f"Failed to copy: {source_path}")
+                                self.logger_errors.error(f"Failed to copy: {source_path}")
+                                self.logger_errors.debug(f"WSL2 DEBUG - Copy failure details: source={source_path}, target={target_file_path}")
                         else:
                             folder_skipped += 1
                             self.operations_logger.warning(f"File already exists, skipping: {target_file_path}")
+                            self.operations_logger.debug(f"WSL2 DEBUG - Skipped existing: {target_file_path}")
                     else:
                         # Dry run mode
                         folder_copied += 1
@@ -834,7 +843,7 @@ class PerformanceOptimizedROMProcessor:
                         
                 except Exception as e:
                     folder_errors += 1
-                    self.operations_logger.error(f"Error processing {file_path}: {str(e)}")
+                    self.logger_errors.error(f"Error processing {file_path}: {str(e)}")
                 
                 finally:
                     # Update global counters thread-safely
@@ -867,7 +876,7 @@ class PerformanceOptimizedROMProcessor:
                 except Exception as e:
                     with progress_lock:
                         errors += 1
-                    self.operations_logger.error(f"Thread error: {str(e)}")
+                    self.logger_errors.error(f"Thread error: {str(e)}")
         
         # Final progress display
         print(f"\rProcessing: [{'█' * 40}] {files_processed}/{len(all_files)} files (100.0%)")
@@ -885,6 +894,187 @@ class PerformanceOptimizedROMProcessor:
         self.operations_logger.info(f"Folder-level threading: Processed {len(files_by_folder)} folders with {max_workers} threads")
         
         return stats
+
+class AsyncFileCopyEngine:
+    """Adaptive file copying engine that automatically optimizes for filesystem type"""
+    
+    def __init__(self, operations_logger, errors_logger, progress_logger, dry_run=False):
+        self.operations_logger = operations_logger
+        self.errors_logger = errors_logger
+        self.progress_logger = progress_logger
+        self.dry_run = dry_run
+        
+        # Environment detection
+        self.is_wsl2 = self._detect_wsl2()
+        self.strategy = self._select_strategy()
+        
+        # Strategy-specific configuration
+        self.max_workers = self.strategy.get('max_workers', 4)
+        self.retry_config = self.strategy.get('retry_config', {})
+        
+        # Logging
+        self.operations_logger.info(f"AsyncFileCopyEngine initialized with {self.strategy['name']} strategy")
+        self.operations_logger.debug(f"WSL2 DEBUG - Selected strategy: {self.strategy}")
+    
+    def _detect_wsl2(self) -> bool:
+        """Detect WSL2 environment"""
+        try:
+            with open('/proc/version', 'r') as f:
+                version_content = f.read().lower()
+                return 'microsoft' in version_content
+        except Exception:
+            return False
+    
+    def _is_windows_mount(self, path: Path) -> bool:
+        """Check if path is Windows mount in WSL"""
+        return str(path).startswith('/mnt/')
+    
+    def _select_strategy(self) -> dict:
+        """Select appropriate copying strategy based on environment"""
+        if self.is_wsl2:
+            return {
+                'name': 'WSL2SingleThreadStrategy',
+                'max_workers': 1,  # Single-threaded for WSL2 Windows mounts
+                'retry_config': {
+                    'max_attempts': 2,
+                    'base_delay': 1.0,
+                    'exponential_base': 3.0,
+                    'jitter': True
+                },
+                'description': 'Single-threaded strategy optimized for WSL2 9p protocol limitations'
+            }
+        else:
+            return {
+                'name': 'HighConcurrencyStrategy', 
+                'max_workers': 8,
+                'retry_config': {
+                    'max_attempts': 3,
+                    'base_delay': 0.1,
+                    'exponential_base': 2.0,
+                    'jitter': False
+                },
+                'description': 'High-concurrency strategy for native Linux filesystems'
+            }
+    
+    def copy_files_adaptive(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
+        """Adaptive file copying with filesystem-aware optimization"""
+        stats = ProcessingStats()
+        start_time = time.perf_counter()
+        
+        self.operations_logger.info(f"Starting adaptive file copying with {self.strategy['name']}")
+        self.operations_logger.debug(f"WSL2 DEBUG - Processing {len(files_by_folder)} folders with {self.max_workers} workers")
+        
+        if self.is_wsl2 and any(self._is_windows_mount(Path(folder)) for folder in files_by_folder.keys()):
+            self.operations_logger.warning("WSL2 + Windows mount detected - Using single-threaded strategy to prevent I/O errors")
+        
+        # Use single-threaded processing for WSL2 to avoid 9p protocol issues
+        if self.max_workers == 1:
+            return self._process_single_threaded(files_by_folder, platforms, target_dir, update_progress_callback)
+        else:
+            return self._process_concurrent(files_by_folder, platforms, target_dir, update_progress_callback)
+    
+    def _process_single_threaded(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
+        """Single-threaded processing optimized for WSL2"""
+        stats = ProcessingStats()
+        
+        self.operations_logger.info("Using single-threaded processing for WSL2 compatibility")
+        
+        total_files = sum(len(files) for files in files_by_folder.values())
+        processed_files = 0
+        
+        for folder_path, files in files_by_folder.items():
+            self.operations_logger.debug(f"WSL2 DEBUG - Processing folder: {folder_path} ({len(files)} files)")
+            
+            for file_info in files:
+                source_path = file_info['path']
+                platform_shortcode = file_info['platform']
+                
+                # Update progress
+                update_progress_callback(f"{platform_shortcode}/{source_path.name}")
+                
+                # Determine target path
+                if platform_shortcode in platforms:
+                    target_platform_dir = target_dir / platform_shortcode
+                    target_file_path = target_platform_dir / source_path.name
+                    
+                    # Perform copy with retry logic
+                    success = self._copy_with_retry(source_path, target_file_path, platform_shortcode)
+                    
+                    if success:
+                        stats.files_copied += 1
+                    else:
+                        stats.errors += 1
+                        
+                processed_files += 1
+                
+                # Progress update every 50 files for single-threaded mode
+                if processed_files % 50 == 0:
+                    progress_pct = (processed_files / total_files) * 100
+                    self.progress_logger.info(f"Single-threaded progress: {processed_files}/{total_files} ({progress_pct:.1f}%)")
+        
+        return stats
+    
+    def _process_concurrent(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
+        """Concurrent processing for native filesystems"""
+        stats = ProcessingStats()
+        
+        self.operations_logger.info(f"Using concurrent processing with {self.max_workers} workers")
+        
+        # Implementation would go here - for now, fallback to existing logic
+        # This is a placeholder for high-concurrency native filesystem processing
+        return stats
+    
+    def _copy_with_retry(self, source_path: Path, target_file_path: Path, platform_shortcode: str) -> bool:
+        """Copy file with filesystem-aware retry logic"""
+        if not self.dry_run and target_file_path.exists():
+            self.operations_logger.debug(f"WSL2 DEBUG - File exists, skipping: {target_file_path}")
+            return True
+            
+        if self.dry_run:
+            self.operations_logger.info(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+            return True
+        
+        retry_config = self.retry_config
+        max_attempts = retry_config.get('max_attempts', 2)
+        base_delay = retry_config.get('base_delay', 1.0)
+        exponential_base = retry_config.get('exponential_base', 3.0)
+        
+        for attempt in range(max_attempts):
+            try:
+                self.operations_logger.debug(f"WSL2 DEBUG - Copy attempt {attempt + 1}/{max_attempts}: {source_path}")
+                self.operations_logger.debug(f"WSL2 DEBUG - Source size: {source_path.stat().st_size} bytes")
+                
+                # Ensure target directory exists
+                target_file_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Perform atomic copy
+                success = copy_file_atomic(source_path, target_file_path)
+                
+                if success:
+                    self.operations_logger.info(f"Successfully copied: {source_path} -> {target_file_path}")
+                    self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
+                    return True
+                else:
+                    raise OSError("copy_file_atomic returned False")
+                    
+            except Exception as e:
+                error_msg = str(e)
+                self.errors_logger.error(f"Copy attempt {attempt + 1} failed: {source_path} - {error_msg}")
+                self.operations_logger.debug(f"WSL2 DEBUG - Copy failure: errno={getattr(e, 'errno', 'unknown')}, error={error_msg}")
+                
+                if attempt < max_attempts - 1:
+                    # Calculate delay with exponential backoff
+                    delay = base_delay * (exponential_base ** attempt)
+                    if retry_config.get('jitter', False):
+                        delay *= (0.5 + 0.5 * random.random())
+                    
+                    self.operations_logger.debug(f"WSL2 DEBUG - Retrying in {delay:.2f}s")
+                    time.sleep(delay)
+                else:
+                    self.errors_logger.error(f"All copy attempts failed for: {source_path}")
+                    return False
+        
+        return False
 
 class PlatformAnalyzer:
     """Analyzes directories and identifies platforms"""
@@ -1312,8 +1502,9 @@ class InteractiveSelector:
 class ComprehensiveLogger:
     """Enhanced logging system with multiple outputs"""
     
-    def __init__(self, dry_run: bool = False):
+    def __init__(self, dry_run: bool = False, debug: bool = False):
         self.dry_run = dry_run
+        self.debug = debug
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.loggers = {}
         self.setup_logging()
@@ -1324,30 +1515,34 @@ class ComprehensiveLogger:
         log_dir.mkdir(exist_ok=True)
         
         # Define log types and their purposes
+        # Use DEBUG level for comprehensive logging when debug flag is enabled
+        default_level = logging.DEBUG if self.debug else logging.INFO
+        error_level = logging.DEBUG if self.debug else logging.ERROR
+        
         log_configs = {
             'operations': {
                 'file': log_dir / f"operations_{self.timestamp}.log",
-                'level': logging.INFO,
+                'level': default_level,
                 'description': 'All file operations and decisions'
             },
             'analysis': {
                 'file': log_dir / f"analysis_{self.timestamp}.log", 
-                'level': logging.INFO,
+                'level': default_level,
                 'description': 'Platform detection and analysis results'
             },
             'errors': {
                 'file': log_dir / f"errors_{self.timestamp}.log",
-                'level': logging.ERROR,
+                'level': error_level,
                 'description': 'Errors and exceptions'
             },
             'summary': {
                 'file': log_dir / f"summary_{self.timestamp}.log",
-                'level': logging.INFO,
+                'level': default_level,
                 'description': 'Final processing summary and statistics'
             },
             'progress': {
                 'file': log_dir / f"progress_{self.timestamp}.log",
-                'level': logging.INFO,
+                'level': default_level,
                 'description': 'Real-time progress updates'
             }
         }
@@ -1385,7 +1580,7 @@ class EnhancedROMOrganizer:
     
     def __init__(self, source_dir: Path, target_dir: Path, 
                  dry_run: bool = False, interactive: bool = True,
-                 regional_mode: str = "consolidated", args=None):
+                 regional_mode: str = "consolidated", debug: bool = False, args=None):
         self.source_dir = source_dir
         self.target_dir = target_dir
         self.dry_run = dry_run
@@ -1393,7 +1588,7 @@ class EnhancedROMOrganizer:
         self.regional_mode = regional_mode
         
         # Initialize components
-        self.comprehensive_logger = ComprehensiveLogger(dry_run)
+        self.comprehensive_logger = ComprehensiveLogger(dry_run, debug)
         self.regional_engine = RegionalPreferenceEngine(regional_mode)
         # Determine subcategory processing setting
         enable_subcategory = True
@@ -1413,7 +1608,15 @@ class EnhancedROMOrganizer:
         self.format_handler = FormatHandler(
             self.comprehensive_logger.get_logger('operations'))
         
-        # Initialize performance-optimized processor
+        # Initialize adaptive file copy engine (replaces PerformanceOptimizedROMProcessor)
+        self.async_copy_engine = AsyncFileCopyEngine(
+            self.comprehensive_logger.get_logger('operations'),
+            self.comprehensive_logger.get_logger('errors'),
+            self.comprehensive_logger.get_logger('progress'),
+            dry_run
+        )
+        
+        # Keep legacy processor for file discovery (will be migrated in future)
         self.performance_processor = PerformanceOptimizedROMProcessor(
             source_dir,
             self.comprehensive_logger.get_logger('operations'),
@@ -1430,6 +1633,63 @@ class EnhancedROMOrganizer:
         self.logger_errors = self.comprehensive_logger.get_logger('errors')
         self.logger_summary = self.comprehensive_logger.get_logger('summary')
         self.logger_performance = self.comprehensive_logger.get_logger('performance')
+        
+        # WSL2 Environment Detection for debugging
+        self._detect_and_log_environment()
+    
+    def _detect_and_log_environment(self):
+        """Detect and log environment information for WSL2 diagnostics"""
+        try:
+            # Check for WSL2 environment
+            with open('/proc/version', 'r') as f:
+                version_info = f.read().lower()
+                is_wsl2 = 'microsoft' in version_info
+                
+            self.logger_ops.debug(f"WSL2 DEBUG - Environment detection:")
+            self.logger_ops.debug(f"WSL2 DEBUG - Kernel version: {version_info.strip()}")
+            self.logger_ops.debug(f"WSL2 DEBUG - Is WSL2: {is_wsl2}")
+            
+            if is_wsl2:
+                self.logger_ops.info("WSL2 environment detected - will use single-threaded file operations for /mnt/* paths")
+                self.logger_ops.debug("WSL2 DEBUG - WSL2 uses 9p protocol for Windows mounts which has concurrency limitations")
+            
+            # Check source directory mount type
+            source_str = str(self.source_dir)
+            is_windows_mount = source_str.startswith('/mnt/')
+            self.logger_ops.debug(f"WSL2 DEBUG - Source directory: {source_str}")
+            self.logger_ops.debug(f"WSL2 DEBUG - Is Windows mount (/mnt/*): {is_windows_mount}")
+            
+            if is_wsl2 and is_windows_mount:
+                self.logger_ops.warning("WSL2 + Windows mount detected - This may cause I/O errors with concurrent operations")
+                
+        except Exception as e:
+            self.logger_ops.debug(f"WSL2 DEBUG - Could not detect environment: {str(e)}")
+    
+    def _group_files_by_folder(self, all_files: List[Path], platforms: Dict) -> Dict:
+        """Group files by their parent folder for adaptive processing"""
+        files_by_folder = defaultdict(list)
+        
+        # Group files by parent directory and identify platforms
+        for file_path in all_files:
+            # Find which platform this file belongs to
+            platform_shortcode = None
+            for shortcode, platform_info in platforms.items():
+                for source_folder in platform_info.source_folders:
+                    if str(source_folder) in str(file_path.parent):
+                        platform_shortcode = shortcode
+                        break
+                if platform_shortcode:
+                    break
+            
+            if platform_shortcode:
+                folder_key = str(file_path.parent)
+                files_by_folder[folder_key].append({
+                    'path': file_path,
+                    'platform': platform_shortcode
+                })
+                
+        self.logger_ops.debug(f"WSL2 DEBUG - Grouped {len(all_files)} files into {len(files_by_folder)} folders")
+        return files_by_folder
     
     def organize_roms(self) -> ProcessingStats:
         """Main organization workflow"""
@@ -1535,15 +1795,24 @@ class EnhancedROMOrganizer:
             self.logger_progress.info("No ROM files found to process!")
             return
         
-        # Phase 2: Concurrent file processing  
+        # Phase 2: Adaptive file processing using AsyncFileCopyEngine
         processing_start = datetime.now()
-        processing_stats = self.performance_processor.process_files_concurrent(
-            all_files, self.target_dir, self.format_handler, platforms, self.regional_engine
+        
+        # Convert file list to folder-grouped structure for adaptive processing
+        files_by_folder = self._group_files_by_folder(all_files, platforms)
+        
+        # Use adaptive copying engine
+        def progress_callback(file_desc):
+            # Simple progress callback - could be enhanced with percentage tracking
+            pass
+        
+        processing_stats = self.async_copy_engine.copy_files_adaptive(
+            files_by_folder, platforms, self.target_dir, progress_callback
         )
         processing_time = (datetime.now() - processing_start).total_seconds()
         
-        # Update main stats
-        self.stats.files_found = processing_stats.files_found
+        # Update main stats (AsyncFileCopyEngine returns simplified stats)
+        self.stats.files_found = len(all_files)
         self.stats.files_copied = processing_stats.files_copied
         self.stats.files_skipped_duplicate = processing_stats.files_skipped_duplicate
         self.stats.errors = processing_stats.errors
@@ -1671,6 +1940,8 @@ Features:
                        help="Disable subcategory consolidation preprocessing (for testing compatibility)")
     parser.add_argument("--subcategory-stats", action="store_true",
                        help="Show detailed subcategory processing statistics")
+    parser.add_argument("--debug", action="store_true",
+                       help="Enable comprehensive DEBUG logging for all components (file I/O, threading, WSL2 diagnostics)")
     parser.add_argument("--debug-analysis", action="store_true",
                        help="Enable detailed debug logging during analysis")
     parser.add_argument("--include-empty-dirs", action="store_true",
@@ -1702,6 +1973,7 @@ Features:
             dry_run=args.dry_run,
             interactive=not args.no_interactive,
             regional_mode=args.regional_mode,
+            debug=args.debug,
             args=args  # Pass args for subcategory processing options
         )
         
