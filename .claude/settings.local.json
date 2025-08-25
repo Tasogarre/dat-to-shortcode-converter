@@ -42,7 +42,12 @@
       "Bash(gh issue close:*)",
       "Bash(/dev/null)",
       "Bash(gh issue view:*)",
-      "Bash(gh issue reopen:*)"
+      "Bash(gh issue reopen:*)",
+      "Bash(cp:*)",
+      "Bash(gh issue list:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": [],

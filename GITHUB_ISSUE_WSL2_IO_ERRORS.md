@@ -6,7 +6,9 @@
 **Affected Environment**: WSL2 with Windows drive mounts (`/mnt/e`)  
 **Error Count**: 29,438 out of 54,522 files (54% failure rate)  
 **Performance Impact**: Degraded to 5.9 files/second (expected 600+/second)  
-**Processing Time**: 3,742 seconds (over 1 hour) for operation that should take 2-3 minutes
+**Processing Time**: 3,742 seconds (over 1 hour) for operation that should take 2-3 minutes  
+**Investigation Date**: August 25, 2025  
+**Impact**: Blocks WSL2 users from using the tool with Windows-mounted ROM collections
 
 ## Problem Description
 
