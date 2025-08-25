@@ -623,7 +623,14 @@ class RegionalPreferenceEngine:
 
 def is_wsl2_mount(path: Path) -> bool:
     """Check if path is on WSL2 Windows mount"""
-    return str(path).startswith('/mnt/')
+    import platform
+    
+    # Only check for /mnt/ on Linux systems
+    if platform.system() != 'Windows':
+        return str(path).startswith('/mnt/')
+    
+    # Windows paths are never WSL2 mounts
+    return False
 
 def copy_file_simple_wsl2(source_path: Path, target_file_path: Path, operations_logger=None) -> bool:
     """WSL2-optimized file copy with timeout and chunked processing support"""
@@ -828,6 +835,7 @@ class PerformanceOptimizedROMProcessor:
         self.source_dir = source_dir
         self.operations_logger = operations_logger
         self.progress_logger = progress_logger
+        self.logger_errors = operations_logger  # Fix AttributeError - use operations_logger for errors
         self.dry_run = dry_run
         self.max_io_workers = 4
         self.hash_chunk_size = 65536
@@ -1112,12 +1120,23 @@ class AsyncFileCopyEngine:
     
     def _detect_wsl2(self) -> bool:
         """Detect WSL2 environment"""
-        try:
-            with open('/proc/version', 'r') as f:
-                version_content = f.read().lower()
-                return 'microsoft' in version_content
-        except Exception:
+        import platform
+        import os
+        
+        # First check if we're on Windows (not WSL)
+        if platform.system() == 'Windows':
             return False
+        
+        # Then check for WSL2 on Linux
+        try:
+            if os.path.exists('/proc/version'):
+                with open('/proc/version', 'r') as f:
+                    version_content = f.read().lower()
+                    return 'microsoft' in version_content
+        except Exception:
+            pass
+        
+        return False
     
     def _is_windows_mount(self, path: Path) -> bool:
         """Check if path is Windows mount in WSL"""
@@ -1288,12 +1307,161 @@ class AsyncFileCopyEngine:
     
     def _process_concurrent(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
         """Concurrent processing for native filesystems"""
+        import time
+        from pathlib import Path
+        from threading import Lock
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
         stats = ProcessingStats()
         
-        self.operations_logger.info(f"Using concurrent processing with {self.max_workers} workers")
+        # Flatten files from folder structure
+        all_files = []
+        for folder_files in files_by_folder.values():
+            all_files.extend(folder_files)
+            
+        stats.files_found = len(all_files)
         
-        # Implementation would go here - for now, fallback to existing logic
-        # This is a placeholder for high-concurrency native filesystem processing
+        if not all_files:
+            return stats
+            
+        self.operations_logger.info(f"Using concurrent processing with {self.max_workers} workers")
+        self.operations_logger.info(f"Processing {len(all_files)} files across {len(files_by_folder)} folders")
+        
+        # Progress tracking variables (thread-safe)
+        progress_lock = Lock()
+        files_processed = 0
+        files_copied = 0
+        files_skipped = 0
+        errors = 0
+        start_time = time.perf_counter()
+        
+        def update_progress_threadsafe():
+            """Thread-safe progress display"""
+            current_time = time.perf_counter()
+            elapsed_time = current_time - start_time
+            
+            if elapsed_time > 0 and files_processed > 0:
+                files_per_sec = files_processed / elapsed_time
+                estimated_total_time = (len(all_files) * elapsed_time) / files_processed
+                eta_seconds = max(0, estimated_total_time - elapsed_time)
+            else:
+                files_per_sec = 0
+                eta_seconds = 0
+            
+            # Use unified progress display
+            display_unified_progress(
+                emoji="📦",
+                label="Processing", 
+                current=files_processed,
+                total=len(all_files),
+                rate=files_per_sec,
+                eta_seconds=eta_seconds
+            )
+        
+        def process_folder_files(folder_path, folder_files):
+            """Process all files from a single folder sequentially"""
+            nonlocal files_processed, files_copied, files_skipped, errors
+            folder_copied = 0
+            folder_skipped = 0 
+            folder_errors = 0
+            
+            self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
+            
+            for file_path in folder_files:
+                try:
+                    source_path = Path(file_path)
+                    
+                    # Find platform for this file
+                    platform_shortcode = None
+                    source_folder_name = None
+                    
+                    if platforms:
+                        # Find which platform this file belongs to
+                        for platform_code, platform_info in platforms.items():
+                            for source_folder in platform_info.source_folders:
+                                # Use the file's parent directory to match platform
+                                try:
+                                    if str(source_path.parent).endswith(source_folder) or source_folder in str(source_path):
+                                        platform_shortcode = platform_code
+                                        source_folder_name = source_folder
+                                        break
+                                except ValueError:
+                                    continue
+                            if platform_shortcode:
+                                break
+                    
+                    if not platform_shortcode:
+                        platform_shortcode = source_path.parent.name.lower()
+                        source_folder_name = source_path.parent.name
+                    
+                    # Determine target path
+                    target_platform_dir = target_dir / platform_shortcode
+                    target_file_path = target_platform_dir / source_path.name
+                    
+                    # Create target directory if needed
+                    target_platform_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Copy file
+                    if not self.dry_run:
+                        if not target_file_path.exists():
+                            success = self._copy_with_retry(source_path, target_file_path, platform_shortcode)
+                            if success:
+                                folder_copied += 1
+                                self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
+                            else:
+                                folder_errors += 1
+                                self.errors_logger.error(f"Failed to copy: {source_path}")
+                        else:
+                            folder_skipped += 1
+                            self.operations_logger.debug(f"File already exists, skipping: {target_file_path}")
+                    else:
+                        # Dry run mode
+                        folder_copied += 1
+                        self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+                        
+                except Exception as e:
+                    folder_errors += 1
+                    self.errors_logger.error(f"Error processing {file_path}: {str(e)}")
+                
+                finally:
+                    # Update global counters thread-safely
+                    with progress_lock:
+                        files_processed += 1
+                        if files_processed % 50 == 0:  # Update progress every 50 files
+                            update_progress_threadsafe()
+                            
+            # Update global stats for this folder
+            with progress_lock:
+                files_copied += folder_copied
+                files_skipped += folder_skipped
+                errors += folder_errors
+        
+        # Process folders concurrently
+        with ThreadPoolExecutor(max_workers=min(len(files_by_folder), self.max_workers)) as executor:
+            # Submit all folder processing tasks
+            future_to_folder = {}
+            for folder_path, folder_files in files_by_folder.items():
+                future = executor.submit(process_folder_files, folder_path, folder_files)
+                future_to_folder[future] = folder_path
+            
+            # Wait for completion and handle any exceptions
+            for future in as_completed(future_to_folder):
+                folder_path = future_to_folder[future]
+                try:
+                    future.result()  # This will raise any exception that occurred
+                except Exception as e:
+                    with progress_lock:
+                        errors += 1
+                    self.errors_logger.error(f"Thread error processing {folder_path}: {str(e)}")
+        
+        # Final progress update
+        with progress_lock:
+            update_progress_threadsafe()
+            stats.files_copied = files_copied
+            stats.files_skipped_duplicate = files_skipped
+            stats.errors = errors
+        
+        print()  # Add newline after progress
         return stats
     
     def _copy_with_retry(self, source_path: Path, target_file_path: Path, platform_shortcode: str) -> bool:
@@ -1573,8 +1741,8 @@ class PlatformAnalyzer:
                 # Log preprocessing if changes were made
                 if folder_name != original_folder_name:
                     if debug_mode:
-                        self.logger.debug(f"    Preprocessed: '{original_folder_name}' → '{folder_name}'")
-                    self.logger.info(f"Subcategory preprocessing: '{original_folder_name}' → '{folder_name}'")
+                        self.logger.debug(f"    Preprocessed: '{original_folder_name}' -> '{folder_name}'")
+                    self.logger.info(f"Subcategory preprocessing: '{original_folder_name}' -> '{folder_name}'")
                     for key, value in preprocessing_context.items():
                         if value and key != 'original_name':
                             self.logger.debug(f"  {key}: {value}")
@@ -1683,9 +1851,9 @@ class InteractiveSelector:
         print(f"🌐 Regional Mode: {self.regional_engine.regional_mode.upper()}")
         
         if self.regional_engine.regional_mode == "consolidated":
-            print("📁 Regional variants will be merged (NES+Famicom→nes)")
+            print("📁 Regional variants will be merged (NES+Famicom->nes)")
         else:
-            print("📁 Regional variants will be kept separate (NES→nes, Famicom→famicom)")
+            print("📁 Regional variants will be kept separate (NES->nes, Famicom->famicom)")
         
         print("⚠️  Significant variants always separated (FDS, N64DD, Sega CD)")
         print("="*80)
@@ -1909,31 +2077,47 @@ class EnhancedROMOrganizer:
     
     def _detect_and_log_environment(self):
         """Detect and log environment information for WSL2 diagnostics"""
+        import platform
+        import os
+        
         try:
+            system_name = platform.system()
+            self.logger_ops.debug(f"Environment DEBUG - Platform system: {system_name}")
+            
             # Check for WSL2 environment
-            with open('/proc/version', 'r') as f:
-                version_info = f.read().lower()
-                is_wsl2 = 'microsoft' in version_info
-                
-            self.logger_ops.debug(f"WSL2 DEBUG - Environment detection:")
-            self.logger_ops.debug(f"WSL2 DEBUG - Kernel version: {version_info.strip()}")
-            self.logger_ops.debug(f"WSL2 DEBUG - Is WSL2: {is_wsl2}")
+            is_wsl2 = False
+            version_info = "N/A"
             
-            if is_wsl2:
-                self.logger_ops.info("WSL2 environment detected - will use single-threaded file operations for /mnt/* paths")
-                self.logger_ops.debug("WSL2 DEBUG - WSL2 uses 9p protocol for Windows mounts which has concurrency limitations")
+            if system_name == 'Windows':
+                self.logger_ops.info("Windows environment detected - will use multi-threaded file operations")
+                is_wsl2 = False
+            elif system_name == 'Linux':
+                # Check if it's WSL2 on Linux
+                if os.path.exists('/proc/version'):
+                    with open('/proc/version', 'r') as f:
+                        version_info = f.read().lower()
+                        is_wsl2 = 'microsoft' in version_info
+                        
+                if is_wsl2:
+                    self.logger_ops.info("WSL2 environment detected - will use single-threaded file operations for /mnt/* paths")
+                    self.logger_ops.debug("WSL2 DEBUG - WSL2 uses 9p protocol for Windows mounts which has concurrency limitations")
+                else:
+                    self.logger_ops.info("Linux environment detected - will use multi-threaded file operations")
             
-            # Check source directory mount type
+            self.logger_ops.debug(f"Environment DEBUG - Kernel version: {version_info}")
+            self.logger_ops.debug(f"Environment DEBUG - Is WSL2: {is_wsl2}")
+            
+            # Check source directory mount type (only relevant for WSL2)
             source_str = str(self.source_dir)
-            is_windows_mount = source_str.startswith('/mnt/')
-            self.logger_ops.debug(f"WSL2 DEBUG - Source directory: {source_str}")
-            self.logger_ops.debug(f"WSL2 DEBUG - Is Windows mount (/mnt/*): {is_windows_mount}")
+            is_windows_mount = source_str.startswith('/mnt/') if system_name == 'Linux' else False
+            self.logger_ops.debug(f"Environment DEBUG - Source directory: {source_str}")
+            self.logger_ops.debug(f"Environment DEBUG - Is Windows mount (/mnt/*): {is_windows_mount}")
             
             if is_wsl2 and is_windows_mount:
                 self.logger_ops.warning("WSL2 + Windows mount detected - This may cause I/O errors with concurrent operations")
                 
         except Exception as e:
-            self.logger_ops.debug(f"WSL2 DEBUG - Could not detect environment: {str(e)}")
+            self.logger_ops.debug(f"Environment DEBUG - Could not detect environment: {str(e)}")
     
     def _group_files_by_folder(self, all_files: List[Path], platforms: Dict) -> Dict:
         """Group files by their parent folder for adaptive processing"""
@@ -2103,11 +2287,11 @@ class EnhancedROMOrganizer:
             self.logger_performance.info(f"Copy rate: {processing_stats.files_copied / max(processing_time, 0.1):.1f} files/second")
         
         # Final progress update
-        self.logger_progress.info(f"✅ Processing complete!")
-        self.logger_progress.info(f"📊 Files copied: {processing_stats.files_copied:,}")
-        self.logger_progress.info(f"📊 Files skipped (duplicates): {processing_stats.files_skipped_duplicate:,}")
-        self.logger_progress.info(f"📊 Errors: {processing_stats.errors:,}")
-        self.logger_progress.info(f"⚡ Total time: {total_time:.2f} seconds")
+        self.logger_progress.info(f"[OK] Processing complete!")
+        self.logger_progress.info(f"[STATS] Files copied: {processing_stats.files_copied:,}")
+        self.logger_progress.info(f"[STATS] Files skipped (duplicates): {processing_stats.files_skipped_duplicate:,}")
+        self.logger_progress.info(f"[STATS] Errors: {processing_stats.errors:,}")
+        self.logger_progress.info(f"[TIME] Total time: {total_time:.2f} seconds")
     
     def _generate_comprehensive_summary(self) -> None:
         """Generate comprehensive processing summary"""
@@ -2132,7 +2316,7 @@ class EnhancedROMOrganizer:
         ]
         
         for platform in sorted(self.stats.selected_platforms):
-            summary_lines.append(f"  ✓ {platform}")
+            summary_lines.append(f"  [x] {platform}")
         
         if self.stats.processing_time > 0:
             files_per_second = self.stats.files_copied / self.stats.processing_time
@@ -2146,18 +2330,18 @@ class EnhancedROMOrganizer:
         summary_lines.extend([
             "",
             "LOGS GENERATED:",
-            f"  📋 Operations: logs/operations_{self.comprehensive_logger.timestamp}.log",
-            f"  📊 Analysis: logs/analysis_{self.comprehensive_logger.timestamp}.log", 
-            f"  ❌ Errors: logs/errors_{self.comprehensive_logger.timestamp}.log",
-            f"  📈 Progress: logs/progress_{self.comprehensive_logger.timestamp}.log",
-            f"  📋 Summary: logs/summary_{self.comprehensive_logger.timestamp}.log",
-            f"  ⚡ Performance: logs/performance_{self.comprehensive_logger.timestamp}.log",
+            f"  [LOG] Operations: logs/operations_{self.comprehensive_logger.timestamp}.log",
+            f"  [STATS] Analysis: logs/analysis_{self.comprehensive_logger.timestamp}.log", 
+            f"  [ERRORS] Errors: logs/errors_{self.comprehensive_logger.timestamp}.log",
+            f"  [PROGRESS] Progress: logs/progress_{self.comprehensive_logger.timestamp}.log",
+            f"  [LOG] Summary: logs/summary_{self.comprehensive_logger.timestamp}.log",
+            f"  [PERF] Performance: logs/performance_{self.comprehensive_logger.timestamp}.log",
             "",
             "PERFORMANCE OPTIMIZATIONS:",
-            f"  🧵 Concurrent I/O workers: {self.performance_processor.max_io_workers}",
-            f"  💾 Memory-mapped hash calculation for large files (>10MB)",
-            f"  🔄 Chunked processing with {self.performance_processor.hash_chunk_size // 1024}KB chunks",
-            f"  📊 Thread-safe progress tracking every {self.performance_processor.progress_update_frequency} files",
+            f"  [THREAD] Concurrent I/O workers: {self.performance_processor.max_io_workers}",
+            f"  [MEM] Memory-mapped hash calculation for large files (>10MB)",
+            f"  [CYCLE] Chunked processing with {self.performance_processor.hash_chunk_size // 1024}KB chunks",
+            f"  [STATS] Thread-safe progress tracking every {self.performance_processor.progress_update_frequency} files",
             "",
             "=" * 80
         ])
@@ -2213,7 +2397,7 @@ Features:
     parser.add_argument("--regional-mode", 
                        choices=["consolidated", "regional"], 
                        default="consolidated",
-                       help="Regional variant handling: 'consolidated' merges variants (NES+Famicom→nes), 'regional' keeps separate (default: consolidated)")
+                       help="Regional variant handling: 'consolidated' merges variants (NES+Famicom->nes), 'regional' keeps separate (default: consolidated)")
     parser.add_argument("--disable-subcategory-processing", action="store_true",
                        help="Disable subcategory consolidation preprocessing (for testing compatibility)")
     parser.add_argument("--subcategory-stats", action="store_true",

@@ -63,7 +63,7 @@ class SubcategoryConsolidationHandler(ProcessingHandler):
                 
                 # Log the consolidation decision
                 if self.logger:
-                    self.logger.debug(f"Subcategory consolidation: '{original_name}' → '{base_platform}'")
+                    self.logger.debug(f"Subcategory consolidation: '{original_name}' -> '{base_platform}'")
                 
                 # Update context for downstream handlers
                 context['subcategory_consolidated'] = True
@@ -98,7 +98,7 @@ class FormatIndicatorHandler(ProcessingHandler):
             new_name = re.sub(pattern, "", processed_name)
             if new_name != processed_name:
                 if self.logger:
-                    self.logger.debug(f"Format indicator removed: '{processed_name}' → '{new_name.strip()}'")
+                    self.logger.debug(f"Format indicator removed: '{processed_name}' -> '{new_name.strip()}'")
                 processed_name = new_name.strip()
                 
                 # Update context
@@ -130,7 +130,7 @@ class PublisherDisambiguationHandler(ProcessingHandler):
             new_name = re.sub(pattern, replacement, processed_name, flags=re.IGNORECASE)
             if new_name != processed_name:
                 if self.logger:
-                    self.logger.debug(f"Publisher normalized: '{processed_name}' → '{new_name}'")
+                    self.logger.debug(f"Publisher normalized: '{processed_name}' -> '{new_name}'")
                 processed_name = new_name
                 
                 # Update context
@@ -236,7 +236,7 @@ def test_subcategory_processor():
     for original, expected in test_cases:
         processed, context = processor.process(original)
         status = "✅ PASS" if processed == expected else "❌ FAIL"
-        print(f"{status} '{original}' → '{processed}'")
+        print(f"{status} '{original}' -> '{processed}'")
         if processed != expected:
             print(f"     Expected: '{expected}'")
     
