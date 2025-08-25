@@ -252,3 +252,10 @@ Thumbs.db
 # Editor Backup Files
 *.bak
 *.orig
+
+# Windows Log Files (copied for analysis)
+windows logs/
+windows_logs/
+
+# Development Test Files
+dat_to_shortcode_converter.py.backup

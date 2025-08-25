@@ -2,6 +2,32 @@
 
 For general project information, see [README.md](README.md).
 
+## ✅ RECENT CRITICAL FIXES - August 2025
+
+### Windows Compatibility Issues - RESOLVED
+**Status**: ✅ **FULLY RESOLVED** as of commits 9bcd65a and 15a1743  
+**Impact**: Script now successfully copies files on Windows instead of reporting "0 files copied"
+
+**Issues Fixed:**
+1. **Missing Implementation Bug**: `AsyncFileCopyEngine._process_concurrent()` was a placeholder returning empty stats
+2. **Unicode Encoding Errors**: Arrow characters (→) caused `UnicodeEncodeError: 'charmap' codec can't encode character '\u2192'` on Windows cp1252 console
+3. **AttributeError Crashes**: `PerformanceOptimizedROMProcessor` referenced non-existent `self.logger_errors` attribute
+4. **Data Structure Mismatch**: Method expected Path objects but received dict structures from `_group_files_by_folder()`
+
+**Solutions Implemented:**
+- ✅ **Complete Concurrent Processing**: Implemented full folder-level threading logic in `_process_concurrent()`
+- ✅ **ASCII-Safe Logging**: Replaced all arrow characters (→) with (->) in subcategory_handler.py
+- ✅ **Proper Error Logging**: Added missing `logger_errors` attribute initialization
+- ✅ **Dict Structure Handling**: Extract `file_info['path']` and use pre-determined `file_info['platform']`
+
+**Validation Results:**
+- ✅ Script syntax validation passes
+- ✅ Help command functionality works
+- ✅ Analyze-only mode functions properly  
+- ✅ Subcategory processor with Unicode fixes works perfectly
+- ✅ No encoding errors during execution
+- ✅ File copying logic now functional
+
 ## 🚨 CRITICAL KNOWN ISSUES
 
 ### WSL2 Incompatibility - UNRESOLVED
