@@ -621,6 +621,39 @@ class RegionalPreferenceEngine:
         
         return display_mapping.get(platform, platform)
 
+def is_wsl2_mount(path: Path) -> bool:
+    """Check if path is on WSL2 Windows mount"""
+    return str(path).startswith('/mnt/')
+
+def copy_file_simple_wsl2(source_path: Path, target_file_path: Path, operations_logger=None) -> bool:
+    """Simple file copy optimized for WSL2 without atomic operations or metadata preservation"""
+    import time
+    
+    try:
+        # Create target directory if needed
+        target_file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Simple copy without metadata preservation (avoids WSL2 9p issues)
+        shutil.copyfile(source_path, target_file_path)
+        
+        # Small delay to prevent 9p protocol overload
+        time.sleep(0.001)  # 1ms delay
+        
+        # Verify copy was successful
+        if not target_file_path.exists() or target_file_path.stat().st_size == 0:
+            if operations_logger:
+                operations_logger.warning(f"WSL2 copy verification failed: {target_file_path}")
+            return False
+            
+        if operations_logger:
+            operations_logger.debug(f"WSL2 simple copy successful: {source_path} -> {target_file_path}")
+        return True
+        
+    except Exception as e:
+        if operations_logger:
+            operations_logger.error(f"WSL2 simple copy failed: {source_path} -> {target_file_path}: {e}")
+        return False
+
 def display_unified_progress(emoji: str, label: str, current: int, total: int, 
                            extra_info: str = "", rate: float = 0, eta_seconds: float = 0) -> None:
     """
@@ -668,13 +701,34 @@ def display_unified_progress(emoji: str, label: str, current: int, total: int,
     print(f"\r{progress_display}", end='', flush=True)
 
 def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
-    """Atomic file copy with verification and retry logic"""
+    """Atomic file copy with verification and retry logic, WSL2-aware"""
     import tempfile
     import time
     
     source_path = Path(source_path)
     target_file_path = Path(target_file_path)
     
+    # WSL2 detection: if either source or target is on Windows mount, use simple copy
+    if is_wsl2_mount(source_path) or is_wsl2_mount(target_file_path):
+        if operations_logger:
+            operations_logger.debug(f"WSL2 mount detected, using simple copy: {source_path}")
+        
+        # Use WSL2-optimized copy with longer delays
+        for attempt in range(min(max_retries, 2)):  # Limit to 2 attempts for WSL2
+            if copy_file_simple_wsl2(source_path, target_file_path, operations_logger):
+                return True
+            
+            if attempt < 1:  # Only retry once
+                if operations_logger:
+                    operations_logger.warning(f"WSL2 copy attempt {attempt + 1} failed, retrying: {source_path}")
+                time.sleep(1.0 + (attempt * 2.0))  # 1s, then 3s delay
+        
+        # All WSL2 attempts failed
+        if operations_logger:
+            operations_logger.error(f"All WSL2 copy attempts failed: {source_path}")
+        return False
+    
+    # Standard atomic copy for native Linux filesystems
     for attempt in range(max_retries):
         try:
             # Create target directory if needed
@@ -1159,56 +1213,19 @@ class AsyncFileCopyEngine:
         return stats
     
     def _copy_with_retry(self, source_path: Path, target_file_path: Path, platform_shortcode: str) -> bool:
-        """Copy file with filesystem-aware retry logic"""
+        """Copy file using WSL2-aware atomic copy function"""
         if not self.dry_run and target_file_path.exists():
-            self.operations_logger.debug(f"WSL2 DEBUG - File exists, skipping: {target_file_path}")
+            self.operations_logger.debug(f"File exists, skipping: {target_file_path}")
             return True
             
         if self.dry_run:
             self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
             return True
         
-        retry_config = self.retry_config
-        max_attempts = retry_config.get('max_attempts', 2)
-        base_delay = retry_config.get('base_delay', 1.0)
-        exponential_base = retry_config.get('exponential_base', 3.0)
+        # Use WSL2-aware atomic copy with appropriate retry logic
+        max_attempts = 2 if (is_wsl2_mount(source_path) or is_wsl2_mount(target_file_path)) else 3
         
-        for attempt in range(max_attempts):
-            try:
-                self.operations_logger.debug(f"WSL2 DEBUG - Copy attempt {attempt + 1}/{max_attempts}: {source_path}")
-                self.operations_logger.debug(f"WSL2 DEBUG - Source size: {source_path.stat().st_size} bytes")
-                
-                # Ensure target directory exists
-                target_file_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Perform atomic copy
-                success = copy_file_atomic(source_path, target_file_path, self.operations_logger)
-                
-                if success:
-                    self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
-                    self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
-                    return True
-                else:
-                    raise OSError("copy_file_atomic returned False")
-                    
-            except Exception as e:
-                error_msg = str(e)
-                self.errors_logger.error(f"Copy attempt {attempt + 1} failed: {source_path} - {error_msg}")
-                self.operations_logger.debug(f"WSL2 DEBUG - Copy failure: errno={getattr(e, 'errno', 'unknown')}, error={error_msg}")
-                
-                if attempt < max_attempts - 1:
-                    # Calculate delay with exponential backoff
-                    delay = base_delay * (exponential_base ** attempt)
-                    if retry_config.get('jitter', False):
-                        delay *= (0.5 + 0.5 * random.random())
-                    
-                    self.operations_logger.debug(f"WSL2 DEBUG - Retrying in {delay:.2f}s")
-                    time.sleep(delay)
-                else:
-                    self.errors_logger.error(f"All copy attempts failed for: {source_path}")
-                    return False
-        
-        return False
+        return copy_file_atomic(source_path, target_file_path, self.operations_logger, max_attempts)
 
 class PlatformAnalyzer:
     """Analyzes directories and identifies platforms"""
