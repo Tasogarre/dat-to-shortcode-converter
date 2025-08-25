@@ -621,6 +621,52 @@ class RegionalPreferenceEngine:
         
         return display_mapping.get(platform, platform)
 
+def display_unified_progress(emoji: str, label: str, current: int, total: int, 
+                           extra_info: str = "", rate: float = 0, eta_seconds: float = 0) -> None:
+    """
+    Display consistent progress bars across all stages of ROM processing
+    
+    Args:
+        emoji: Stage emoji (🔍 for discovery, 📦 for processing, etc.)
+        label: Stage label (Discovering, Processing, etc.)
+        current: Current progress value
+        total: Total expected value
+        extra_info: Additional information to display after the progress bar
+        rate: Rate of progress (files/second, etc.) - optional
+        eta_seconds: Estimated time remaining in seconds - optional
+    """
+    # Consistent 40-character progress bar
+    progress_bar_width = 40
+    if total > 0:
+        progress_ratio = min(current / total, 1.0)
+        progress_pct = progress_ratio * 100
+        filled = int(progress_bar_width * progress_ratio)
+    else:
+        progress_ratio = 0.0
+        progress_pct = 0.0
+        filled = 0
+    
+    bar = "█" * filled + "░" * (progress_bar_width - filled)
+    
+    # Base progress display
+    progress_display = f"{emoji} {label}: [{bar}] {current:,}/{total:,} ({progress_pct:.1f}%)"
+    
+    # Add extra info if provided
+    if extra_info:
+        progress_display += f" | {extra_info}"
+    
+    # Add rate if provided
+    if rate > 0:
+        progress_display += f" | {rate:.1f} files/s"
+    
+    # Add ETA if provided
+    if eta_seconds > 0:
+        eta_str = f"{int(eta_seconds//60)}:{int(eta_seconds%60):02d}"
+        progress_display += f" | ETA: {eta_str}"
+    
+    # Display with carriage return for same-line updates
+    print(f"\r{progress_display}", end='', flush=True)
+
 def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
     """Atomic file copy with verification and retry logic"""
     import tempfile
@@ -688,16 +734,59 @@ class PerformanceOptimizedROMProcessor:
         self.progress_update_frequency = 100
     
     def discover_files_concurrent(self, platforms, selected_platforms):
-        """Discover ROM files in selected platform directories"""
+        """Discover ROM files in selected platform directories with progress tracking"""
+        import time
+        
         files = []
+        total_platforms = len(selected_platforms)
+        processed_platforms = 0
+        start_time = time.perf_counter()
+        
         for platform_shortcode in selected_platforms:
             if platform_shortcode in platforms:
                 platform_info = platforms[platform_shortcode]
+                
+                # Track folders within this platform
+                total_folders = len(platform_info.source_folders)
+                processed_folders = 0
+                
                 for source_folder in platform_info.source_folders:
                     folder_path = self.source_dir / source_folder
                     if folder_path.exists():
                         for ext in ROM_EXTENSIONS:
                             files.extend(folder_path.rglob(f"*{ext}"))
+                    
+                    processed_folders += 1
+                    
+                    # Update progress every folder for small collections or every few folders for large ones
+                    current_time = time.perf_counter()
+                    
+                    # Show progress for each platform completion or periodically
+                    if processed_folders == total_folders or current_time - start_time > 0.5:
+                        start_time = current_time
+                        extra_info = f"{len(files):,} files found"
+                        display_unified_progress(
+                            emoji="🔍",
+                            label="Discovering", 
+                            current=processed_platforms,
+                            total=total_platforms,
+                            extra_info=extra_info
+                        )
+            
+            processed_platforms += 1
+            
+            # Final update for this platform
+            extra_info = f"{len(files):,} files found"
+            display_unified_progress(
+                emoji="🔍",
+                label="Discovering", 
+                current=processed_platforms,
+                total=total_platforms,
+                extra_info=extra_info
+            )
+        
+        # Clear the progress line and show completion
+        print()  # Add newline after progress
         return files
     
     def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
@@ -734,7 +823,7 @@ class PerformanceOptimizedROMProcessor:
         self.operations_logger.info(f"Folder-level threading: Processing {len(files_by_folder)} folders with {len(all_files)} total files")
         
         def update_progress(file_name=""):
-            """Thread-safe progress display"""
+            """Thread-safe progress display using unified format"""
             nonlocal current_file_name
             if file_name:
                 current_file_name = file_name
@@ -747,28 +836,20 @@ class PerformanceOptimizedROMProcessor:
                 
                 if files_processed > 0:
                     estimated_total_time = (len(all_files) * elapsed_time) / files_processed
-                    remaining_time = max(0, estimated_total_time - elapsed_time)
+                    eta_seconds = max(0, estimated_total_time - elapsed_time)
                 else:
-                    remaining_time = 0
+                    eta_seconds = 0
                     files_per_sec = 0
                 
-                # Progress bar
-                progress = files_processed / len(all_files) if len(all_files) > 0 else 0
-                bar_length = 40
-                filled_length = int(bar_length * progress)
-                bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                
-                # Format time remaining
-                remaining_str = f"{remaining_time:.1f}s" if remaining_time < 60 else f"{remaining_time/60:.1f}m"
-                
-                # Truncate current file name if too long
-                display_file = current_file_name[-50:] if len(current_file_name) > 50 else current_file_name
-                
-                # Update same line using carriage return
-                print(f"\rProcessing: [{bar}] {files_processed}/{len(all_files)} files ({progress*100:.1f}%)", end='', flush=True)
-                print(f"\nCurrent: {display_file} | {remaining_str} remaining | {files_per_sec:.1f} files/sec", end='', flush=True)
-                # Move cursor back up to overwrite next time
-                print("\033[F", end='', flush=True)
+                # Use unified progress display
+                display_unified_progress(
+                    emoji="📦",
+                    label="Processing", 
+                    current=files_processed,
+                    total=len(all_files),
+                    rate=files_per_sec,
+                    eta_seconds=eta_seconds
+                )
         
         def process_folder_files(folder_path, folder_files):
             """Process all files from a single folder sequentially (eliminates directory contention)"""
@@ -884,9 +965,16 @@ class PerformanceOptimizedROMProcessor:
                         errors += 1
                     self.logger_errors.error(f"Thread error: {str(e)}")
         
-        # Final progress display
-        print(f"\rProcessing: [{'█' * 40}] {files_processed}/{len(all_files)} files (100.0%)")
-        print(f"✅ Complete! Processed {files_processed} files")
+        # Final progress display with newline
+        display_unified_progress(
+            emoji="📦",
+            label="Processing", 
+            current=files_processed,
+            total=len(all_files),
+            rate=files_processed / (time.perf_counter() - start_time) if (time.perf_counter() - start_time) > 0 else 0,
+            eta_seconds=0
+        )
+        print(f"\n✅ Multi-threaded processing complete: {files_processed:,} files processed")
         
         # Update stats
         stats.files_copied = files_copied
@@ -1032,27 +1120,27 @@ class AsyncFileCopyEngine:
                         
                 processed_files += 1
                 
-                # Progress update with dynamic frequency and proper terminal control
+                # Progress update with unified display function
                 current_time = time.perf_counter()
                 if processed_files % update_frequency == 0 or processed_files == total_files:
                     elapsed_time = current_time - start_time
-                    progress_pct = (processed_files / total_files) * 100
                     
                     if elapsed_time > 0:
                         files_per_sec = processed_files / elapsed_time
                         eta_seconds = (total_files - processed_files) / files_per_sec if files_per_sec > 0 else 0
-                        eta_str = f"{int(eta_seconds//60)}:{int(eta_seconds%60):02d}" if eta_seconds > 0 else "0:00"
                     else:
                         files_per_sec = 0
-                        eta_str = "0:00"
+                        eta_seconds = 0
                     
-                    # Use carriage return to update same line (no excessive newlines)
-                    progress_bar_width = 30
-                    filled = int(progress_bar_width * processed_files / total_files)
-                    bar = "█" * filled + "░" * (progress_bar_width - filled)
-                    
-                    print(f"\r📋 Progress: [{bar}] {processed_files:,}/{total_files:,} ({progress_pct:.1f}%) | {files_per_sec:.1f} files/s | ETA: {eta_str}", 
-                          end='', flush=True)
+                    # Use unified progress display
+                    display_unified_progress(
+                        emoji="📦",
+                        label="Processing", 
+                        current=processed_files,
+                        total=total_files,
+                        rate=files_per_sec,
+                        eta_seconds=eta_seconds
+                    )
                     
                     last_update_time = current_time
         
