@@ -170,6 +170,7 @@ class ProcessingStats:
     platforms_found: int = 0
     files_found: int = 0
     files_copied: int = 0
+    files_replaced: int = 0  # Files that were replaced due to differences
     files_skipped_duplicate: int = 0
     files_skipped_unknown: int = 0
     errors: int = 0
@@ -632,8 +633,8 @@ def is_wsl2_mount(path: Path) -> bool:
     # Windows paths are never WSL2 mounts
     return False
 
-def copy_file_simple_wsl2(source_path: Path, target_file_path: Path, operations_logger=None) -> bool:
-    """WSL2-optimized file copy with timeout and chunked processing support"""
+def copy_file_simple_wsl2(source_path: Path, target_file_path: Path, operations_logger=None):
+    """WSL2-optimized file copy with timeout and chunked processing support, returns (success, error_msg)"""
     import time
     import signal
     import threading
@@ -675,37 +676,127 @@ def copy_file_simple_wsl2(source_path: Path, target_file_path: Path, operations_
         success, error = copy_with_timeout(source_path, target_file_path, timeout_seconds=30)
         
         if not success:
+            error_msg = str(error) if error else "Unknown WSL2 copy error"
             if operations_logger:
                 if isinstance(error, TimeoutError):
-                    operations_logger.error(f"WSL2 copy timeout: {source_path} -> {target_file_path}: {error}")
+                    operations_logger.error(f"WSL2 copy timeout: {source_path} -> {target_file_path}: {error_msg}")
                 else:
-                    operations_logger.error(f"WSL2 copy failed: {source_path} -> {target_file_path}: {error}")
-            return False
+                    operations_logger.error(f"WSL2 copy failed: {source_path} -> {target_file_path}: {error_msg}")
+            return False, error_msg
         
         # Increased delay for WSL2 9p protocol stability
         time.sleep(0.01)  # 10ms delay (increased from 1ms)
         
         # Verify copy was successful
         if not target_file_path.exists() or target_file_path.stat().st_size == 0:
+            error_msg = f"WSL2 copy verification failed: {target_file_path}"
             if operations_logger:
-                operations_logger.warning(f"WSL2 copy verification failed: {target_file_path}")
-            return False
+                operations_logger.warning(error_msg)
+            return False, error_msg
         
         # Verify file size matches
         target_size = target_file_path.stat().st_size
         if target_size != source_size:
+            error_msg = f"WSL2 copy size mismatch: {source_path} ({source_size} vs {target_size})"
             if operations_logger:
-                operations_logger.warning(f"WSL2 copy size mismatch: {source_path} ({source_size} vs {target_size})")
-            return False
+                operations_logger.warning(error_msg)
+            return False, error_msg
             
         if operations_logger:
             operations_logger.debug(f"WSL2 copy successful: {source_path.name} ({source_size:,} bytes)")
-        return True
+        return True, None
         
     except Exception as e:
+        error_msg = f"WSL2 copy exception: {str(e)}"
         if operations_logger:
-            operations_logger.error(f"WSL2 copy failed: {source_path} -> {target_file_path}: {e}")
-        return False
+            operations_logger.error(f"WSL2 copy failed: {source_path} -> {target_file_path}: {error_msg}")
+        return False, error_msg
+
+def calculate_sha1(file_path, chunk_size=65536):
+    """Calculate SHA1 hash with optimal method selection based on file size"""
+    import mmap
+    
+    file_path = Path(file_path)
+    
+    try:
+        file_size = file_path.stat().st_size
+        sha1_hash = hashlib.sha1()
+        
+        # Use memory mapping for files larger than 100MB for efficiency
+        if file_size > 100 * 1024 * 1024:  # 100MB threshold
+            with open(file_path, 'rb') as f:
+                # Memory-mapped reading for large files
+                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped:
+                    sha1_hash.update(mmapped)
+        else:
+            # Chunked reading for smaller files (better for concurrent operations)
+            with open(file_path, 'rb') as f:
+                while chunk := f.read(chunk_size):
+                    sha1_hash.update(chunk)
+        
+        return sha1_hash.hexdigest()
+    
+    except (OSError, IOError) as e:
+        # Return None if file cannot be read (file locked, missing, etc.)
+        return None
+    except Exception as e:
+        # Return None for any other error during hash calculation
+        return None
+
+def should_copy_file(source_path, target_path, operations_logger=None):
+    """Determine if file needs copying based on existence, size, and SHA1 hash comparison
+    
+    Returns:
+        tuple: (should_copy: bool, reason: str, details: dict)
+    """
+    source_path = Path(source_path)
+    target_path = Path(target_path)
+    
+    # Quick check: if target doesn't exist, definitely copy
+    if not target_path.exists():
+        return True, "new_file", {"action": "copy"}
+    
+    try:
+        # Get file sizes for quick comparison
+        source_size = source_path.stat().st_size
+        target_size = target_path.stat().st_size
+        
+        # Different sizes = different files, need to copy
+        if source_size != target_size:
+            if operations_logger:
+                operations_logger.debug(f"Size mismatch for {source_path.name}: source={source_size}, target={target_size}")
+            return True, "size_mismatch", {"action": "replace", "source_size": source_size, "target_size": target_size}
+        
+        # Same size - need SHA1 comparison to determine if identical
+        source_hash = calculate_sha1(source_path)
+        target_hash = calculate_sha1(target_path)
+        
+        # Handle hash calculation failures
+        if source_hash is None:
+            if operations_logger:
+                operations_logger.warning(f"Failed to calculate source hash for {source_path}")
+            return True, "source_hash_failed", {"action": "copy_force"}
+            
+        if target_hash is None:
+            if operations_logger:
+                operations_logger.warning(f"Failed to calculate target hash for {target_path}")
+            return True, "target_hash_failed", {"action": "replace_force"}
+        
+        # Compare hashes
+        if source_hash == target_hash:
+            if operations_logger:
+                operations_logger.debug(f"Files identical (SHA1: {source_hash[:8]}...): {source_path.name}")
+            return False, "identical_hash", {"action": "skip", "hash": source_hash}
+        else:
+            if operations_logger:
+                operations_logger.debug(f"Hash mismatch for {source_path.name}: source={source_hash[:8]}..., target={target_hash[:8]}...")
+            return True, "hash_mismatch", {"action": "replace", "source_hash": source_hash, "target_hash": target_hash}
+    
+    except Exception as e:
+        # If any error occurs during comparison, err on the side of copying
+        if operations_logger:
+            operations_logger.warning(f"Error during file comparison for {source_path.name}: {e}")
+        return True, "comparison_error", {"action": "copy_force", "error": str(e)}
 
 def display_unified_progress(emoji: str, label: str, current: int, total: int, 
                            extra_info: str = "", rate: float = 0, eta_seconds: float = 0) -> None:
@@ -754,12 +845,21 @@ def display_unified_progress(emoji: str, label: str, current: int, total: int,
     print(f"\r{progress_display}", end='', flush=True)
 
 def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
-    """Atomic file copy with verification and retry logic, WSL2-aware"""
+    """Atomic file copy with verification and retry logic, returns (success, error_msg)"""
     import tempfile
     import time
+    import platform
+    import gc
     
     source_path = Path(source_path)
     target_file_path = Path(target_file_path)
+    is_windows = platform.system() == 'Windows'
+    
+    # Windows-specific retry delays (more conservative)
+    if is_windows:
+        retry_delays = [0.5, 1.5, 3.0]  # Progressive delays for Windows
+    else:
+        retry_delays = [0.1, 0.2, 0.4]  # Faster for Unix-like systems
     
     # WSL2 detection: if either source or target is on Windows mount, use simple copy
     if is_wsl2_mount(source_path) or is_wsl2_mount(target_file_path):
@@ -768,8 +868,9 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
         
         # Use WSL2-optimized copy with longer delays
         for attempt in range(min(max_retries, 2)):  # Limit to 2 attempts for WSL2
-            if copy_file_simple_wsl2(source_path, target_file_path, operations_logger):
-                return True
+            success, error_msg = copy_file_simple_wsl2(source_path, target_file_path, operations_logger)
+            if success:
+                return True, None
             
             if attempt < 1:  # Only retry once
                 if operations_logger:
@@ -777,12 +878,15 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
                 time.sleep(1.0 + (attempt * 2.0))  # 1s, then 3s delay
         
         # All WSL2 attempts failed
+        error_msg = f"All WSL2 copy attempts failed: {source_path}"
         if operations_logger:
-            operations_logger.error(f"All WSL2 copy attempts failed: {source_path}")
-        return False
+            operations_logger.error(error_msg)
+        return False, error_msg
     
-    # Standard atomic copy for native Linux filesystems
+    # Standard atomic copy with platform-specific optimizations
+    last_error = None
     for attempt in range(max_retries):
+        temp_path = None
         try:
             # Create target directory if needed
             target_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -798,48 +902,86 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
             # Copy to temporary file
             shutil.copy2(source_path, temp_path)
             
+            # Windows-specific optimization: explicit flush and brief delay
+            if is_windows:
+                try:
+                    # Force garbage collection to release file handles
+                    gc.collect()
+                    time.sleep(0.05)  # Brief delay for Windows file system
+                except Exception:
+                    pass  # Don't fail on optimization attempts
+            
             # Verify the copy was successful (not 0-byte)
             if temp_path.stat().st_size == 0:
                 temp_path.unlink(missing_ok=True)
+                error_msg = f"0-byte file detected during copy: {source_path}"
                 if attempt < max_retries - 1:
                     if operations_logger:
-                        operations_logger.warning(f"0-byte file detected, retrying: {source_path} (attempt {attempt + 1})")
-                    time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                        operations_logger.warning(f"{error_msg} (attempt {attempt + 1})")
+                    time.sleep(retry_delays[min(attempt, len(retry_delays) - 1)])
                     continue
                 else:
-                    raise IOError(f"Failed to copy after {max_retries} attempts - 0-byte file: {source_path}")
+                    return False, f"Failed to copy after {max_retries} attempts - {error_msg}"
             
-            # Atomic rename to final destination
-            temp_path.rename(target_file_path)
-            return True
+            # Atomic rename to final destination with platform-specific handling
+            if is_windows:
+                # Use os.replace for better Windows compatibility
+                import os
+                os.replace(str(temp_path), str(target_file_path))
+            else:
+                temp_path.rename(target_file_path)
+            
+            return True, None
                 
         except Exception as e:
+            last_error = str(e)
             # Clean up temp file on error
-            if 'temp_path' in locals() and temp_path.exists():
-                temp_path.unlink(missing_ok=True)
+            if temp_path and temp_path.exists():
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass  # Don't fail cleanup
             
             if attempt < max_retries - 1:
                 if operations_logger:
-                    operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {str(e)}")
-                time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                    operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {last_error}")
+                time.sleep(retry_delays[min(attempt, len(retry_delays) - 1)])
                 continue
             else:
-                raise e
+                break
     
-    return False
+    # All attempts failed
+    error_msg = f"Failed to copy after {max_retries} attempts: {last_error}"
+    return False, error_msg
 
 class PerformanceOptimizedROMProcessor:
     """Simple processor for basic ROM organization functionality"""
     
-    def __init__(self, source_dir, operations_logger, progress_logger, dry_run=False):
+    def __init__(self, source_dir, operations_logger, progress_logger, dry_run=False, max_workers=None):
+        import platform
+        
         self.source_dir = source_dir
         self.operations_logger = operations_logger
         self.progress_logger = progress_logger
         self.logger_errors = operations_logger  # Fix AttributeError - use operations_logger for errors
         self.dry_run = dry_run
-        self.max_io_workers = 4
+        
+        # Platform-aware thread defaults
+        if max_workers is not None:
+            self.max_io_workers = max_workers
+        else:
+            is_windows = platform.system() == 'Windows'
+            if is_windows:
+                self.max_io_workers = 2  # Conservative for Windows
+            else:
+                self.max_io_workers = 4  # More aggressive for Unix-like systems
+        
         self.hash_chunk_size = 65536
         self.progress_update_frequency = 100
+        
+        # Log platform and threading configuration
+        platform_name = platform.system()
+        self.operations_logger.info(f"Platform: {platform_name}, Thread workers: {self.max_io_workers}")
     
     def discover_files_concurrent(self, platforms, selected_platforms):
         """Discover ROM files in selected platform directories with progress tracking"""
@@ -917,6 +1059,7 @@ class PerformanceOptimizedROMProcessor:
         progress_lock = Lock()
         files_processed = 0
         files_copied = 0
+        files_replaced = 0
         files_skipped = 0
         errors = 0
         start_time = time.perf_counter()
@@ -961,8 +1104,9 @@ class PerformanceOptimizedROMProcessor:
         
         def process_folder_files(folder_path, folder_files):
             """Process all files from a single folder sequentially (eliminates directory contention)"""
-            nonlocal files_processed, files_copied, files_skipped, errors
+            nonlocal files_processed, files_copied, files_replaced, files_skipped, errors
             folder_copied = 0
+            folder_replaced = 0
             folder_skipped = 0 
             folder_errors = 0
             
@@ -1010,27 +1154,49 @@ class PerformanceOptimizedROMProcessor:
                     # Update progress display
                     update_progress(f"{platform_shortcode}/{source_path.name}")
                     
-                    # Copy file atomically
+                    # Smart file copy with SHA1 verification
                     if not self.dry_run:
-                        if not target_file_path.exists():
-                            # DEBUG: WSL2 filesystem diagnostics
-                            self.operations_logger.debug(f"WSL2 DEBUG - Copying: {source_path} (size: {source_path.stat().st_size} bytes)")
-                            self.operations_logger.debug(f"WSL2 DEBUG - Source mount point: {source_path.parts[1] if len(source_path.parts) > 1 else 'unknown'}")
-                            self.operations_logger.debug(f"WSL2 DEBUG - Target: {target_file_path}")
+                        # Check if we need to copy using SHA1 comparison
+                        should_copy, reason, details = should_copy_file(source_path, target_file_path, self.operations_logger)
+                        
+                        if should_copy:
+                            # Log the reason for copying
+                            if reason == "new_file":
+                                self.operations_logger.debug(f"Copying new file: {source_path.name}")
+                            elif reason in ["size_mismatch", "hash_mismatch"]:
+                                self.operations_logger.info(f"Replacing different file: {source_path.name} (reason: {reason})")
+                            else:
+                                self.operations_logger.debug(f"Copying file: {source_path.name} (reason: {reason})")
                             
-                            success = copy_file_atomic(source_path, target_file_path, self.operations_logger)
+                            # Perform atomic copy with improved error handling
+                            success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
+                            
                             if success:
-                                folder_copied += 1
-                                self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
-                                self.operations_logger.debug(f"WSL2 DEBUG - Copy success: {target_file_path.stat().st_size} bytes written")
+                                # Differentiate between new copies and replacements
+                                if reason == "new_file":
+                                    folder_copied += 1
+                                else:
+                                    folder_replaced += 1
+                                self.operations_logger.debug(f"Successfully copied: {source_path.name}")
+                                # Log file size for verification
+                                try:
+                                    target_size = target_file_path.stat().st_size
+                                    self.operations_logger.debug(f"Copy verified: {target_size:,} bytes written")
+                                except Exception:
+                                    pass
                             else:
                                 folder_errors += 1
-                                self.logger_errors.error(f"Failed to copy: {source_path}")
-                                self.logger_errors.debug(f"WSL2 DEBUG - Copy failure details: source={source_path}, target={target_file_path}")
+                                self.logger_errors.error(f"Failed to copy {source_path.name}: {error_msg}")
+                                # Log detailed failure for debugging
+                                self.logger_errors.debug(f"Copy failure: {source_path} -> {target_file_path}")
                         else:
+                            # File is identical, skip it
                             folder_skipped += 1
-                            self.operations_logger.warning(f"File already exists, skipping: {target_file_path}")
-                            self.operations_logger.debug(f"WSL2 DEBUG - Skipped existing: {target_file_path}")
+                            if reason == "identical_hash":
+                                hash_preview = details.get("hash", "unknown")[:8]
+                                self.operations_logger.debug(f"Skipped identical file: {source_path.name} (SHA1: {hash_preview}...)")
+                            else:
+                                self.operations_logger.debug(f"Skipped file: {source_path.name} (reason: {reason})")
                     else:
                         # Dry run mode
                         folder_copied += 1
@@ -1048,10 +1214,11 @@ class PerformanceOptimizedROMProcessor:
             # Update global stats for this folder
             with progress_lock:
                 files_copied += folder_copied
+                files_replaced += folder_replaced
                 files_skipped += folder_skipped
                 errors += folder_errors
                 
-            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_skipped} skipped, {folder_errors} errors")
+            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_replaced} replaced, {folder_skipped} skipped, {folder_errors} errors")
         
         # Process folders with one thread per folder (eliminates directory contention)
         max_workers = min(self.max_io_workers, len(files_by_folder))
@@ -1083,9 +1250,11 @@ class PerformanceOptimizedROMProcessor:
             eta_seconds=0
         )
         print(f"\n✅ Multi-threaded processing complete: {files_processed:,} files processed")
+        print(f"   📋 Results: {files_copied:,} copied, {files_replaced:,} replaced, {files_skipped:,} skipped, {errors:,} errors")
         
         # Update stats
         stats.files_copied = files_copied
+        stats.files_replaced = files_replaced
         stats.files_skipped_duplicate = files_skipped
         stats.errors = errors
         
@@ -2034,6 +2203,11 @@ class EnhancedROMOrganizer:
         self.interactive = interactive
         self.regional_mode = regional_mode
         
+        # Extract concurrency settings from args
+        self.max_workers = getattr(args, 'threads', None) if args else None
+        self.verify_copies = getattr(args, 'verify_copies', False) if args else False
+        self.skip_identical = getattr(args, 'skip_identical', True) if args else True
+        
         # Initialize components
         self.comprehensive_logger = ComprehensiveLogger(dry_run, debug)
         self.regional_engine = RegionalPreferenceEngine(regional_mode)
@@ -2068,7 +2242,8 @@ class EnhancedROMOrganizer:
             source_dir,
             self.comprehensive_logger.get_logger('operations'),
             self.comprehensive_logger.get_logger('progress'),
-            dry_run
+            dry_run,
+            max_workers=getattr(self, 'max_workers', None)  # Use max_workers if provided
         )
         
         # Statistics tracking
@@ -2316,8 +2491,9 @@ class EnhancedROMOrganizer:
             f"  Platforms Found: {self.stats.platforms_found}",
             f"  Platforms Selected: {len(self.stats.selected_platforms)}",
             f"  Total Files Found: {self.stats.files_found:,}",
-            f"  Files Copied: {self.stats.files_copied:,}",
-            f"  Files Skipped (Duplicates): {self.stats.files_skipped_duplicate:,}",
+            f"  Files Copied (New): {self.stats.files_copied:,}",
+            f"  Files Replaced: {self.stats.files_replaced:,}",
+            f"  Files Skipped (Identical): {self.stats.files_skipped_duplicate:,}",
             f"  Files Skipped (Unknown): {self.stats.files_skipped_unknown:,}",
             f"  Errors: {self.stats.errors:,}",
             "",
@@ -2417,6 +2593,16 @@ Features:
                        help="Enable detailed debug logging during analysis")
     parser.add_argument("--include-empty-dirs", action="store_true",
                        help="Process directories even without ROM files (useful for DAT collections)")
+    
+    # New concurrency and verification options
+    parser.add_argument("--threads", type=int, choices=range(1, 9), metavar="[1-8]",
+                       help="Number of concurrent threads (1-8). Default: 2 on Windows, 4 on Linux")
+    parser.add_argument("--verify-copies", action="store_true",
+                       help="Verify copied files with SHA1 hash after copying (adds overhead)")
+    parser.add_argument("--skip-identical", action="store_true", default=True,
+                       help="Skip files with identical SHA1 hashes (default: enabled)")
+    parser.add_argument("--no-skip-identical", action="store_false", dest="skip_identical",
+                       help="Always copy files even if SHA1 hashes match (force overwrite)")
     
     args = parser.parse_args()
     
