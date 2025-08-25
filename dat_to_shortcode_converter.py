@@ -621,6 +621,60 @@ class RegionalPreferenceEngine:
         
         return display_mapping.get(platform, platform)
 
+def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
+    """Atomic file copy with verification and retry logic"""
+    import tempfile
+    import time
+    
+    source_path = Path(source_path)
+    target_file_path = Path(target_file_path)
+    
+    for attempt in range(max_retries):
+        try:
+            # Create target directory if needed
+            target_file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Use temporary file for atomic copy
+            with tempfile.NamedTemporaryFile(
+                dir=target_file_path.parent,
+                delete=False,
+                suffix='.tmp'
+            ) as temp_file:
+                temp_path = Path(temp_file.name)
+            
+            # Copy to temporary file
+            shutil.copy2(source_path, temp_path)
+            
+            # Verify the copy was successful (not 0-byte)
+            if temp_path.stat().st_size == 0:
+                temp_path.unlink(missing_ok=True)
+                if attempt < max_retries - 1:
+                    if operations_logger:
+                        operations_logger.warning(f"0-byte file detected, retrying: {source_path} (attempt {attempt + 1})")
+                    time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                    continue
+                else:
+                    raise IOError(f"Failed to copy after {max_retries} attempts - 0-byte file: {source_path}")
+            
+            # Atomic rename to final destination
+            temp_path.rename(target_file_path)
+            return True
+                
+        except Exception as e:
+            # Clean up temp file on error
+            if 'temp_path' in locals() and temp_path.exists():
+                temp_path.unlink(missing_ok=True)
+            
+            if attempt < max_retries - 1:
+                if operations_logger:
+                    operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {str(e)}")
+                time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+                continue
+            else:
+                raise e
+    
+    return False
+
 class PerformanceOptimizedROMProcessor:
     """Simple processor for basic ROM organization functionality"""
     
@@ -716,55 +770,6 @@ class PerformanceOptimizedROMProcessor:
                 # Move cursor back up to overwrite next time
                 print("\033[F", end='', flush=True)
         
-        def copy_file_atomic(source_path, target_file_path, max_retries=3):
-            """Atomic file copy with verification and retry logic"""
-            source_path = Path(source_path)
-            target_file_path = Path(target_file_path)
-            
-            for attempt in range(max_retries):
-                try:
-                    # Create target directory if needed
-                    target_file_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    # Use temporary file for atomic copy
-                    with tempfile.NamedTemporaryFile(
-                        dir=target_file_path.parent,
-                        delete=False,
-                        suffix='.tmp'
-                    ) as temp_file:
-                        temp_path = Path(temp_file.name)
-                    
-                    # Copy to temporary file
-                    shutil.copy2(source_path, temp_path)
-                    
-                    # Verify the copy was successful (not 0-byte)
-                    if temp_path.stat().st_size == 0:
-                        temp_path.unlink(missing_ok=True)
-                        if attempt < max_retries - 1:
-                            self.operations_logger.warning(f"0-byte file detected, retrying: {source_path} (attempt {attempt + 1})")
-                            time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
-                            continue
-                        else:
-                            raise IOError(f"Failed to copy after {max_retries} attempts - 0-byte file: {source_path}")
-                    
-                    # Atomic rename to final destination
-                    temp_path.rename(target_file_path)
-                    return True
-                    
-                except Exception as e:
-                    # Clean up temp file on error
-                    if 'temp_path' in locals() and temp_path.exists():
-                        temp_path.unlink(missing_ok=True)
-                    
-                    if attempt < max_retries - 1:
-                        self.operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {str(e)}")
-                        time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
-                        continue
-                    else:
-                        raise e
-            
-            return False
-                        
         def process_folder_files(folder_path, folder_files):
             """Process all files from a single folder sequentially (eliminates directory contention)"""
             nonlocal files_processed, files_copied, files_skipped, errors
@@ -824,7 +829,7 @@ class PerformanceOptimizedROMProcessor:
                             self.operations_logger.debug(f"WSL2 DEBUG - Source mount point: {source_path.parts[1] if len(source_path.parts) > 1 else 'unknown'}")
                             self.operations_logger.debug(f"WSL2 DEBUG - Target: {target_file_path}")
                             
-                            success = copy_file_atomic(source_path, target_file_path)
+                            success = copy_file_atomic(source_path, target_file_path, self.operations_logger)
                             if success:
                                 folder_copied += 1
                                 self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
@@ -1050,7 +1055,7 @@ class AsyncFileCopyEngine:
                 target_file_path.parent.mkdir(parents=True, exist_ok=True)
                 
                 # Perform atomic copy
-                success = copy_file_atomic(source_path, target_file_path)
+                success = copy_file_atomic(source_path, target_file_path, self.operations_logger)
                 
                 if success:
                     self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
