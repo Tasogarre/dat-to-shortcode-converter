@@ -33,14 +33,22 @@
       "Bash(claude /model sonnet)",
       "Bash(mkdir:*)",
       "Bash(touch:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(diff:*)",
+      "Bash(git restore:*)",
+      "Bash(mount)",
+      "Bash(gh issue comment:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh issue close:*)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "/mnt/e",
       "/mnt",
-      "/tmp/test-roms"
+      "/tmp/test-roms",
+      "/tmp/test-roms/test-source",
+      "/tmp/test-roms/test-target"
     ]
   },
   "enabledMcpjsonServers": [
@@ -51,5 +59,6 @@
     "perplexity-mcp",
     "tavily-remote",
     "playwright"
-  ]
+  ],
+  "outputStyle": "Explanatory"
 }

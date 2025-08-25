@@ -979,15 +979,36 @@ class AsyncFileCopyEngine:
         else:
             return self._process_concurrent(files_by_folder, platforms, target_dir, update_progress_callback)
     
+    def _calculate_progress_update_frequency(self, total_files: int) -> int:
+        """Calculate appropriate progress update frequency based on file count"""
+        if total_files < 1000:
+            return 10  # Update every 10 files for small collections
+        elif total_files < 10000:
+            return 100  # Update every 100 files for medium collections
+        elif total_files < 50000:
+            return 500  # Update every 500 files for large collections
+        else:
+            return 1000  # Update every 1000 files for very large collections
+    
     def _process_single_threaded(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
         """Single-threaded processing optimized for WSL2"""
-        stats = ProcessingStats()
+        import time
         
+        stats = ProcessingStats()
         total_files = sum(len(files) for files in files_by_folder.values())
         
         self.operations_logger.info("Using single-threaded processing for WSL2 compatibility")
         self.operations_logger.info(f"Processing {total_files} files across {len(files_by_folder)} folders")
+        
+        # Calculate appropriate update frequency
+        update_frequency = self._calculate_progress_update_frequency(total_files)
+        
         processed_files = 0
+        start_time = time.perf_counter()
+        last_update_time = start_time
+        
+        # User feedback about processing mode
+        print(f"📦 Starting single-threaded file processing ({total_files:,} files)...", flush=True)
         
         for folder_path, files in files_by_folder.items():
             self.operations_logger.debug(f"WSL2 DEBUG - Processing folder: {folder_path} ({len(files)} files)")
@@ -995,9 +1016,6 @@ class AsyncFileCopyEngine:
             for file_info in files:
                 source_path = file_info['path']
                 platform_shortcode = file_info['platform']
-                
-                # Update progress
-                update_progress_callback(f"{platform_shortcode}/{source_path.name}")
                 
                 # Determine target path
                 if platform_shortcode in platforms:
@@ -1014,11 +1032,32 @@ class AsyncFileCopyEngine:
                         
                 processed_files += 1
                 
-                # Progress update every 50 files for single-threaded mode
-                if processed_files % 50 == 0:
+                # Progress update with dynamic frequency and proper terminal control
+                current_time = time.perf_counter()
+                if processed_files % update_frequency == 0 or processed_files == total_files:
+                    elapsed_time = current_time - start_time
                     progress_pct = (processed_files / total_files) * 100
-                    self.progress_logger.info(f"Single-threaded progress: {processed_files}/{total_files} ({progress_pct:.1f}%)")
+                    
+                    if elapsed_time > 0:
+                        files_per_sec = processed_files / elapsed_time
+                        eta_seconds = (total_files - processed_files) / files_per_sec if files_per_sec > 0 else 0
+                        eta_str = f"{int(eta_seconds//60)}:{int(eta_seconds%60):02d}" if eta_seconds > 0 else "0:00"
+                    else:
+                        files_per_sec = 0
+                        eta_str = "0:00"
+                    
+                    # Use carriage return to update same line (no excessive newlines)
+                    progress_bar_width = 30
+                    filled = int(progress_bar_width * processed_files / total_files)
+                    bar = "█" * filled + "░" * (progress_bar_width - filled)
+                    
+                    print(f"\r📋 Progress: [{bar}] {processed_files:,}/{total_files:,} ({progress_pct:.1f}%) | {files_per_sec:.1f} files/s | ETA: {eta_str}", 
+                          end='', flush=True)
+                    
+                    last_update_time = current_time
         
+        # Final progress update with newline
+        print(f"\n✅ Single-threaded processing complete: {processed_files:,} files processed")
         return stats
     
     def _process_concurrent(self, files_by_folder, platforms, target_dir, update_progress_callback) -> ProcessingStats:
@@ -1786,6 +1825,10 @@ class EnhancedROMOrganizer:
         """Process files for selected platforms using concurrent optimization"""
         start_time = datetime.now()
         
+        # Immediate user feedback after platform selection
+        total_expected_files = sum(platforms[p].file_count for p in selected_platforms if p in platforms)
+        print(f"🔍 Discovering ROM files for {len(selected_platforms)} platforms... (~{total_expected_files:,} files expected)", flush=True)
+        
         # Log performance configuration
         cpu_count = os.cpu_count() or 1
         self.logger_performance.info(f"System CPU cores: {cpu_count}")
@@ -1797,10 +1840,14 @@ class EnhancedROMOrganizer:
         all_files = self.performance_processor.discover_files_concurrent(platforms, selected_platforms)
         discovery_time = (datetime.now() - discovery_start).total_seconds()
         
+        # User feedback for file discovery completion
+        print(f"✅ Discovery complete: {len(all_files):,} files found in {discovery_time:.1f}s", flush=True)
+        
         self.logger_performance.info(f"File discovery completed in {discovery_time:.2f} seconds")
         self.logger_performance.info(f"Discovery rate: {len(all_files) / max(discovery_time, 0.1):.1f} files/second")
         
         if not all_files:
+            print("ℹ️  No ROM files found to process!")
             self.logger_progress.info("No ROM files found to process!")
             return
         
