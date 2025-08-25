@@ -368,9 +368,38 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 - **Chain of Responsibility** - maintain preprocessing pipeline modularity
 - **Thread safety** - ensure concurrent operations remain safe
 
-## Recent Updates (2025-08-24)
+## Recent Updates (2025-08-25)
 
-### Critical Bug Fix - Directory Scanning Logic ✅ RESOLVED
+### Critical Bug - Race Conditions in Concurrent File Copying ⚠️ UNDER INVESTIGATION
+
+**Issue:** Concurrent file operations using `shutil.copy2()` in `ThreadPoolExecutor` environment cause race conditions resulting in 0-byte target files and copy failures.
+
+**Root Cause Identified:** 
+- **Location**: `dat_to_shortcode_converter.py` lines 756-758 in `process_single_file()` function
+- **Problem**: `shutil.copy2()` called without synchronization while multiple threads access same source files
+- **Race Conditions**:
+  1. Multiple threads reading same source file simultaneously → I/O contention → incomplete reads → 0-byte targets
+  2. File existence check (line 757) not atomic with copy operation (line 758) → concurrent writes to same target
+
+**Evidence:**
+- 40,051 errors during processing with many 0-byte files
+- Manual copying works perfectly (no concurrent access)
+- Context7 MCP research confirmed `shutil.copy2()` is not thread-safe
+
+**Solution Design Completed:**
+Using Clear-Thought analysis toolkit, comprehensive solution designed:
+
+1. **Thread-Safe File Locking**: Per-file locks to prevent concurrent access
+2. **Atomic File Operations**: Copy to temporary files, then atomic rename
+3. **Command Pattern with Retry**: Encapsulate copy operations with automatic retry
+4. **Copy Verification**: Post-copy integrity checks to detect 0-byte files
+5. **Deadlock Prevention**: Consistent lock ordering for concurrent operations
+
+**Status**: Solution architecture complete, implementation pending
+**Impact**: Affects reliability of concurrent file copying operations
+**Workaround**: Use single-threaded processing or reduce concurrency
+
+### Previous Bug Fix - Directory Scanning Logic ✅ RESOLVED
 **Issue:** Tool was incorrectly processing individual game subdirectories (like "Aero Fighter 2") as potential platforms, causing 310+ "unknown platforms" to be reported.
 
 **Root Cause:** `os.walk()` was recursively scanning ALL directories, including game subdirectories within platform folders.

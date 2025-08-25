@@ -213,7 +213,6 @@ __marimo__/
 
 # Application Generated Files
 logs/
-*.log
 
 # DAT to Shortcode Converter - Development Artifacts
 analyze_*.py
@@ -223,6 +222,11 @@ ref_*.md
 *_plan.md
 *_guide.md
 enhanced_platform_mappings.py
+
+# Race Condition Analysis and Fix Implementation
+race_condition_fix.py
+thread_safe_copy_*.py
+concurrent_copy_*.py
 
 # Testing and Debugging Files - Production Testing Files Included in Repo
 test_*/

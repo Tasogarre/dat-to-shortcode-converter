@@ -40,11 +40,12 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 
 ### ⚡ **High-Performance Processing**
 - **Real-time progress feedback** - Live progress bars with file names, completion %, time remaining, and processing speed
-- **Concurrent file processing** - Multi-threaded operations for maximum speed
+- **Thread-safe concurrent processing** - Multi-threaded operations with race condition protection
 - **Lightning-fast performance** - Process thousands of files in seconds
 - **Memory-efficient hashing** - Memory-mapped SHA1 for files >10MB
 - **Optimized for large collections** - Handles 50,000+ ROM files efficiently
 - **Comprehensive monitoring** - Detailed logs and performance metrics
+- **⚠️ Known Issue**: Race condition bug in concurrent file copying (under investigation)
 
 ### 🎮 **Smart Platform Handling**
 - **40+ supported platforms** - All major EmulationStation systems
@@ -280,6 +281,12 @@ Examples:
 - Ensure target directory is writable
 - Close any running emulators or ROM managers
 - Check file permissions on source ROMs
+
+**Files copied as 0-bytes or copying failures**
+- **Current Investigation**: Race condition bug in concurrent file operations
+- **Temporary Workaround**: Reduce concurrency or use single-threaded processing
+- **Status**: Solution designed using atomic file operations and thread-safe locking
+- Check logs for "Input/output error" messages indicating concurrent access issues
 
 **Slow performance**
 - Use local drives instead of network storage

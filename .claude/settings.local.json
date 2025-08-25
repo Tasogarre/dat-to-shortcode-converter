@@ -31,7 +31,9 @@
       "mcp__perplexity-mcp__perplexity_search_web",
       "Bash(cat:*)",
       "Bash(claude /model sonnet)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],
