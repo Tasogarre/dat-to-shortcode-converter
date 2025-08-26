@@ -29,7 +29,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Set, Optional, NamedTuple
 from collections import defaultdict, Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from good_pattern_handler import SpecializedPatternProcessor
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -171,15 +171,22 @@ class ProcessingStats:
     files_found: int = 0
     files_copied: int = 0
     files_replaced: int = 0  # Files that were replaced due to differences
+    files_renamed_duplicates: int = 0  # Files renamed to prevent overwriting
     files_skipped_duplicate: int = 0
     files_skipped_unknown: int = 0
     errors: int = 0
     processing_time: float = 0.0
     selected_platforms: List[str] = None
+    folders_created: Set[str] = field(default_factory=set)  # Track created directories
 
     def __post_init__(self):
         if self.selected_platforms is None:
             self.selected_platforms = []
+    
+    @property
+    def total_unique_files(self) -> int:
+        """Calculate total unique files processed (copied + renamed)"""
+        return self.files_copied + self.files_renamed_duplicates
 
 # Enhanced platform mappings with regex patterns
 PLATFORM_MAPPINGS = {
@@ -954,6 +961,136 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
     error_msg = f"Failed to copy after {max_retries} attempts: {last_error}"
     return False, error_msg
 
+def extract_folder_hint(folder_name: str) -> Optional[str]:
+    """Extract a short, meaningful identifier from folder name
+    
+    Examples:
+    - "NES-1" -> "1"
+    - "NES-USA" -> "USA"  
+    - "Nintendo Entertainment System (Europe)" -> "Europe"
+    - "NES (Alt)" -> "Alt"
+    - "NES_v2" -> "v2"
+    
+    Returns:
+        Short identifier (max 8 chars) or None if no meaningful hint found
+    """
+    import re
+    
+    # Clean input
+    folder_name = folder_name.strip()
+    
+    # Try to extract patterns in order of preference
+    patterns = [
+        (r'-(\w{1,8})$', 'suffix_dash'),           # Suffix after dash: NES-1 -> "1"
+        (r'_(\w{1,8})$', 'suffix_underscore'),     # Suffix after underscore: NES_v2 -> "v2"
+        (r'\(([^)]{1,8})\)', 'parentheses'),       # Short text in parens: (Alt) -> "Alt"
+        (r'\[([^\]]{1,8})\]', 'brackets'),         # Short text in brackets: [USA] -> "USA"
+        (r'(?:^|\s)v(\d+)', 'version'),            # Version numbers: v2 -> "2"
+        (r'(?:^|\s)(\d{1,3})$', 'trailing_number'), # Trailing numbers: NES 2 -> "2"
+        (r'(?:^|\s)(\w{2,4})(?:\s|$)', 'short_word'), # Short meaningful words
+    ]
+    
+    for pattern, pattern_type in patterns:
+        match = re.search(pattern, folder_name, re.IGNORECASE)
+        if match:
+            hint = match.group(1).strip()
+            # Filter out common words and ensure reasonable length
+            if (hint.lower() not in ['the', 'and', 'or', 'of', 'in', 'at', 'to', 'for'] 
+                and len(hint) >= 1 and len(hint) <= 8):
+                return hint
+    
+    # No meaningful hint found
+    return None
+
+def get_unique_target_path(
+    source_path: Path,
+    target_dir: Path, 
+    platform: str,
+    source_folder_name: str,
+    existing_paths: Set[str],
+    operations_logger
+) -> Tuple[Path, Optional[str]]:
+    """Generate collision-free target path with intelligent duplicate handling
+    
+    Args:
+        source_path: Source file path
+        target_dir: Base target directory
+        platform: Target platform shortcode
+        source_folder_name: Name of source folder (for hint extraction)
+        existing_paths: Set of target paths already claimed
+        operations_logger: Logger for debugging
+    
+    Returns:
+        Tuple of (unique_target_path, rename_reason)
+        rename_reason can be:
+        - None: Original name used
+        - "skip_identical": File is truly identical, should skip
+        - "renamed_with_hint_X": Renamed using folder hint
+        - "renamed_with_number_X": Renamed with numbered suffix
+        - "error_too_many_duplicates": Unable to find unique name
+    """
+    filename = source_path.name
+    stem = source_path.stem  # Filename without extension
+    suffix = source_path.suffix  # Extension including dot
+    
+    base_target = target_dir / platform / filename
+    base_target_str = str(base_target)
+    
+    # First file with this name - use as-is
+    if (base_target_str not in existing_paths and not base_target.exists()):
+        return base_target, None
+    
+    # Path collision detected - check if truly identical via SHA1
+    if base_target.exists():
+        try:
+            source_hash = calculate_sha1(source_path)
+            target_hash = calculate_sha1(base_target)
+            if source_hash and target_hash and source_hash == target_hash:
+                operations_logger.debug(f"Truly identical file detected via SHA1: {filename}")
+                return base_target, "skip_identical"
+        except Exception as e:
+            operations_logger.warning(f"SHA1 comparison failed for {filename}: {e}")
+    
+    # Different file with same name - need unique name
+    operations_logger.info(f"Filename collision detected for: {filename} (from {source_folder_name})")
+    
+    # Strategy 1: Try using source folder hint
+    folder_hint = extract_folder_hint(source_folder_name) if source_folder_name else None
+    if folder_hint:
+        unique_name = f"{stem} ({folder_hint}){suffix}"
+        unique_path = target_dir / platform / unique_name
+        unique_path_str = str(unique_path)
+        
+        if (unique_path_str not in existing_paths and not unique_path.exists()):
+            operations_logger.info(f"Using folder hint for rename: {filename} -> {unique_name}")
+            return unique_path, f"renamed_with_hint_{folder_hint}"
+    
+    # Strategy 2: Fall back to numbered suffix (2), (3), etc.
+    counter = 2
+    while counter < 100:
+        unique_name = f"{stem} ({counter}){suffix}"
+        unique_path = target_dir / platform / unique_name
+        unique_path_str = str(unique_path)
+        
+        if (unique_path_str not in existing_paths and not unique_path.exists()):
+            operations_logger.info(f"Using numbered suffix for rename: {filename} -> {unique_name}")
+            return unique_path, f"renamed_with_number_{counter}"
+        counter += 1
+    
+    # Should never reach here - emergency fallback
+    operations_logger.error(f"Unable to find unique name for {filename} after 99 attempts")
+    return base_target, "error_too_many_duplicates"
+
+def count_files_in_directory(target_dir: Path) -> int:
+    """Count actual ROM files in target directory for validation"""
+    if not target_dir.exists():
+        return 0
+    
+    count = 0
+    for ext in ROM_EXTENSIONS:
+        count += len(list(target_dir.rglob(f"*{ext}")))
+    return count
+
 class PerformanceOptimizedROMProcessor:
     """Simple processor for basic ROM organization functionality"""
     
@@ -1061,6 +1198,7 @@ class PerformanceOptimizedROMProcessor:
         files_copied = 0
         files_replaced = 0
         files_skipped = 0
+        files_renamed = 0  # Track renamed duplicates globally
         errors = 0
         start_time = time.perf_counter()
         current_file_name = ""
@@ -1104,11 +1242,15 @@ class PerformanceOptimizedROMProcessor:
         
         def process_folder_files(folder_path, folder_files):
             """Process all files from a single folder sequentially (eliminates directory contention)"""
-            nonlocal files_processed, files_copied, files_replaced, files_skipped, errors
+            nonlocal files_processed, files_copied, files_replaced, files_skipped, files_renamed, errors
             folder_copied = 0
             folder_replaced = 0
             folder_skipped = 0 
             folder_errors = 0
+            folder_renamed = 0  # New counter for renamed duplicates
+            
+            # Track target paths being created to prevent collisions
+            target_paths_in_batch = set()
             
             self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
             
@@ -1143,16 +1285,42 @@ class PerformanceOptimizedROMProcessor:
                     if regional_engine:
                         platform_shortcode = regional_engine.get_target_platform(source_folder_name or "", platform_shortcode)
                     
-                    # Determine target path
+                    # Get base target directory (with format handling)
                     if format_handler and source_folder_name:
                         target_platform_dir = format_handler.get_target_path(platform_shortcode, source_folder_name, target_dir)
                     else:
                         target_platform_dir = target_dir / platform_shortcode
                     
-                    target_file_path = target_platform_dir / source_path.name
+                    # Get unique target path (prevents filename collisions)
+                    target_file_path, rename_reason = get_unique_target_path(
+                        source_path,
+                        target_dir,
+                        platform_shortcode,
+                        source_folder_name,
+                        target_paths_in_batch,
+                        self.operations_logger
+                    )
+                    
+                    # Track this target path to prevent future collisions
+                    target_paths_in_batch.add(str(target_file_path))
+                    
+                    # Handle rename reasons from unique path generation
+                    if rename_reason == "skip_identical":
+                        folder_skipped += 1
+                        self.operations_logger.debug(f"Skipping truly identical file: {source_path.name}")
+                        continue
+                    elif rename_reason and rename_reason.startswith("renamed_"):
+                        folder_renamed += 1
+                        # Log the rename decision
+                        if "hint_" in rename_reason:
+                            hint = rename_reason.split("hint_")[1]
+                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (hint: {hint})")
+                        elif "number_" in rename_reason:
+                            number = rename_reason.split("number_")[1]
+                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (#{number})")
                     
                     # Update progress display
-                    update_progress(f"{platform_shortcode}/{source_path.name}")
+                    update_progress(f"{platform_shortcode}/{target_file_path.name}")
                     
                     # Smart file copy with SHA1 verification
                     if not self.dry_run:
@@ -1162,18 +1330,26 @@ class PerformanceOptimizedROMProcessor:
                         if should_copy:
                             # Log the reason for copying
                             if reason == "new_file":
-                                self.operations_logger.debug(f"Copying new file: {source_path.name}")
+                                self.operations_logger.debug(f"Copying new file: {target_file_path.name}")
                             elif reason in ["size_mismatch", "hash_mismatch"]:
-                                self.operations_logger.info(f"Replacing different file: {source_path.name} (reason: {reason})")
+                                self.operations_logger.info(f"Replacing different file: {target_file_path.name} (reason: {reason})")
                             else:
-                                self.operations_logger.debug(f"Copying file: {source_path.name} (reason: {reason})")
+                                self.operations_logger.debug(f"Copying file: {target_file_path.name} (reason: {reason})")
                             
                             # Perform atomic copy with improved error handling
                             success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
                             
                             if success:
-                                # Differentiate between new copies and replacements
-                                if reason == "new_file":
+                                # Track folder creation
+                                folder_dir_str = str(target_file_path.parent)
+                                if folder_dir_str not in stats.folders_created:
+                                    stats.folders_created.add(folder_dir_str)
+                                
+                                # Count based on rename status
+                                if rename_reason and rename_reason.startswith("renamed_"):
+                                    # This is a renamed duplicate, don't count as replaced
+                                    folder_copied += 1
+                                elif reason == "new_file":
                                     folder_copied += 1
                                 else:
                                     folder_replaced += 1
@@ -1199,8 +1375,12 @@ class PerformanceOptimizedROMProcessor:
                                 self.operations_logger.debug(f"Skipped file: {source_path.name} (reason: {reason})")
                     else:
                         # Dry run mode
-                        folder_copied += 1
-                        self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+                        if rename_reason and rename_reason.startswith("renamed_"):
+                            folder_renamed += 1
+                            self.operations_logger.debug(f"[DRY RUN] Would rename: {source_path} -> {target_file_path}")
+                        else:
+                            folder_copied += 1
+                            self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
                         
                 except Exception as e:
                     folder_errors += 1
@@ -1216,9 +1396,10 @@ class PerformanceOptimizedROMProcessor:
                 files_copied += folder_copied
                 files_replaced += folder_replaced
                 files_skipped += folder_skipped
+                files_renamed += folder_renamed
                 errors += folder_errors
                 
-            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_replaced} replaced, {folder_skipped} skipped, {folder_errors} errors")
+            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_replaced} replaced, {folder_renamed} renamed, {folder_skipped} skipped, {folder_errors} errors")
         
         # Process folders with one thread per folder (eliminates directory contention)
         max_workers = min(self.max_io_workers, len(files_by_folder))
@@ -1250,11 +1431,12 @@ class PerformanceOptimizedROMProcessor:
             eta_seconds=0
         )
         print(f"\n✅ Multi-threaded processing complete: {files_processed:,} files processed")
-        print(f"   📋 Results: {files_copied:,} copied, {files_replaced:,} replaced, {files_skipped:,} skipped, {errors:,} errors")
+        print(f"   📋 Results: {files_copied:,} copied, {files_replaced:,} replaced, {files_renamed:,} renamed, {files_skipped:,} skipped, {errors:,} errors")
         
         # Update stats
         stats.files_copied = files_copied
         stats.files_replaced = files_replaced
+        stats.files_renamed_duplicates = files_renamed
         stats.files_skipped_duplicate = files_skipped
         stats.errors = errors
         
@@ -1389,6 +1571,9 @@ class AsyncFileCopyEngine:
         last_update_time = start_time
         last_chunk_time = start_time
         
+        # Track target paths globally to prevent collisions across chunks
+        global_target_paths = set()
+        
         # User feedback about processing mode
         print(f"📦 Starting WSL2-optimized chunked processing ({total_files:,} files)...", flush=True)
         self.operations_logger.info(f"Using chunked processing: {chunk_size} files per chunk with {recovery_pause}s recovery pauses")
@@ -1410,11 +1595,42 @@ class AsyncFileCopyEngine:
             for file_info in chunk_files:
                 source_path = file_info['path']
                 platform_shortcode = file_info['platform']
+                source_folder_name = file_info.get('source_folder', source_path.parent.name)
                 
-                # Determine target path
+                # Determine target path with duplicate handling
                 if platform_shortcode in platforms:
-                    target_platform_dir = target_dir / platform_shortcode
-                    target_file_path = target_platform_dir / source_path.name
+                    # Get unique target path to prevent filename collisions
+                    target_file_path, rename_reason = get_unique_target_path(
+                        source_path,
+                        target_dir,
+                        platform_shortcode,
+                        source_folder_name,
+                        global_target_paths,
+                        self.operations_logger
+                    )
+                    
+                    # Track this target path to prevent future collisions
+                    global_target_paths.add(str(target_file_path))
+                    
+                    # Handle rename reasons
+                    if rename_reason == "skip_identical":
+                        stats.files_skipped_duplicate += 1
+                        self.operations_logger.debug(f"Skipping truly identical file: {source_path.name}")
+                        processed_files += 1
+                        continue
+                    elif rename_reason and rename_reason.startswith("renamed_"):
+                        stats.files_renamed_duplicates += 1
+                        # Log the rename decision
+                        if "hint_" in rename_reason:
+                            hint = rename_reason.split("hint_")[1]
+                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (hint: {hint})")
+                        elif "number_" in rename_reason:
+                            number = rename_reason.split("number_")[1]
+                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (#{number})")
+                    
+                    # Update progress display with final filename
+                    if update_progress_callback:
+                        update_progress_callback(f"{platform_shortcode}/{target_file_path.name}")
                     
                     # Perform copy with retry logic
                     success = self._copy_with_retry(source_path, target_file_path, platform_shortcode)
@@ -2473,7 +2689,10 @@ class EnhancedROMOrganizer:
         # Final progress update
         self.logger_progress.info(f"[OK] Processing complete!")
         self.logger_progress.info(f"[STATS] Files copied: {processing_stats.files_copied:,}")
+        self.logger_progress.info(f"[STATS] Files renamed (duplicates): {processing_stats.files_renamed_duplicates:,}")
+        self.logger_progress.info(f"[STATS] Files replaced: {processing_stats.files_replaced:,}")
         self.logger_progress.info(f"[STATS] Files skipped (duplicates): {processing_stats.files_skipped_duplicate:,}")
+        self.logger_progress.info(f"[STATS] Total unique files: {processing_stats.total_unique_files:,}")
         self.logger_progress.info(f"[STATS] Errors: {processing_stats.errors:,}")
         self.logger_progress.info(f"[TIME] Total time: {total_time:.2f} seconds")
     
@@ -2492,9 +2711,12 @@ class EnhancedROMOrganizer:
             f"  Platforms Selected: {len(self.stats.selected_platforms)}",
             f"  Total Files Found: {self.stats.files_found:,}",
             f"  Files Copied (New): {self.stats.files_copied:,}",
+            f"  Files Renamed (Duplicates): {self.stats.files_renamed_duplicates:,}",
             f"  Files Replaced: {self.stats.files_replaced:,}",
             f"  Files Skipped (Identical): {self.stats.files_skipped_duplicate:,}",
             f"  Files Skipped (Unknown): {self.stats.files_skipped_unknown:,}",
+            f"  Total Unique Files: {self.stats.total_unique_files:,}",
+            f"  Folders Created: {len(self.stats.folders_created) if hasattr(self.stats, 'folders_created') else 'N/A'}",
             f"  Errors: {self.stats.errors:,}",
             "",
             "SELECTED PLATFORMS:",
@@ -2502,6 +2724,17 @@ class EnhancedROMOrganizer:
         
         for platform in sorted(self.stats.selected_platforms):
             summary_lines.append(f"  [x] {platform}")
+        
+        # Add duplicate handling section if any duplicates were renamed
+        if self.stats.files_renamed_duplicates > 0:
+            summary_lines.extend([
+                "",
+                "DUPLICATE FILENAME HANDLING:",
+                f"  Files Renamed to Prevent Overwrites: {self.stats.files_renamed_duplicates:,}",
+                f"  Naming Pattern: filename (n).ext or filename (hint).ext",
+                f"  Check operations log for specific rename decisions",
+                f"  ⚠️  Data Loss Prevented: {self.stats.files_renamed_duplicates:,} files would have been overwritten!"
+            ])
         
         if self.stats.processing_time > 0:
             files_per_second = self.stats.files_copied / self.stats.processing_time
@@ -2665,12 +2898,45 @@ Features:
             # Full processing
             stats = organizer.organize_roms()
             
-            if stats.files_copied > 0:
-                print(f"\n🎉 Success! Organized {stats.files_copied:,} files across {len(stats.selected_platforms)} platforms.")
-                print(f"🌐 Regional mode: {args.regional_mode}")
+            # Calculate comprehensive statistics
+            unique_files_processed = stats.total_unique_files
+            
+            if unique_files_processed > 0:
+                print(f"\n🎉 Success! Processing Complete")
+                print(f"\n📊 File Statistics:")
+                print(f"   📄 New files copied: {stats.files_copied:,}")
+                if stats.files_renamed_duplicates > 0:
+                    print(f"   📝 Duplicates renamed: {stats.files_renamed_duplicates:,} (prevented overwrites!)")
+                if stats.files_replaced > 0:
+                    print(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
+                if stats.files_skipped_duplicate > 0:
+                    print(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
+                print(f"   ✅ Total unique files processed: {unique_files_processed:,}")
+                
+                # Validation check (only if not dry run)
+                if not args.dry_run:
+                    try:
+                        actual_files_in_target = count_files_in_directory(target_dir)
+                        print(f"   📁 Files in target directory: {actual_files_in_target:,}")
+                        if actual_files_in_target != unique_files_processed:
+                            print(f"   ⚠️  WARNING: Count mismatch!")
+                            print(f"      Expected: {unique_files_processed:,}")
+                            print(f"      Found: {actual_files_in_target:,}")
+                    except Exception:
+                        pass  # Don't fail on validation
+                
+                print(f"\n📂 Organization Statistics:")
+                if hasattr(stats, 'folders_created'):
+                    print(f"   🗂️  Folders created: {len(stats.folders_created)}")
+                print(f"   🎮 Platforms organized: {len(stats.selected_platforms)}")
+                print(f"   🌐 Regional mode: {args.regional_mode}")
+                
             elif args.dry_run:
-                print(f"\n📋 Dry run complete. Would have organized {stats.files_copied:,} files.")
-                print(f"🌐 Regional mode: {args.regional_mode}")
+                print(f"\n📋 Dry run complete")
+                print(f"   📄 Would copy: {stats.files_copied:,} files")
+                if stats.files_renamed_duplicates > 0:
+                    print(f"   📝 Would rename: {stats.files_renamed_duplicates:,} duplicates")
+                print(f"   🌐 Regional mode: {args.regional_mode}")
             else:
                 print(f"\n✅ Processing complete. No files needed copying.")
             

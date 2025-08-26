@@ -4,6 +4,31 @@ For general project information, see [README.md](README.md).
 
 ## ✅ RECENT CRITICAL FIXES - August 2025
 
+### **NEW** Duplicate Filename Overwriting Bug - RESOLVED
+**Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
+**Impact**: Prevents data loss from files with identical names across source folders
+
+**Problem Discovered:**
+- Files with same names from different source folders (e.g., `NES-1/game.nes` and `NES-2/game.nes`) were mapping to identical target paths
+- Second file would overwrite first file, causing permanent data loss
+- User experienced: 50,569 files "organized" but only 48,594 actually in target (1,975 files lost!)
+
+**Root Cause:** Line 1152 - `target_file_path = target_platform_dir / source_path.name` creates identical paths for same filenames
+
+**Solution Implemented:**
+- ✅ **Smart Deduplication**: New `get_unique_target_path()` function prevents filename collisions
+- ✅ **Intelligent Naming**: Extracts hints from source folders (`NES-1` → `game (1).nes`, `NES-USA` → `game (USA).nes`)
+- ✅ **SHA1 Verification**: Still detects and skips truly identical files  
+- ✅ **Enhanced Statistics**: Tracks renamed files separately from copied/replaced
+- ✅ **Comprehensive Reporting**: Clear breakdown of copied vs renamed vs replaced files
+- ✅ **Validation Check**: Counts actual files in target directory and warns of mismatches
+
+**New Features:**
+- Folder hint extraction: `"NES-1"` → `"1"`, `"NES (Europe)"` → `"Europe"`
+- Numbered fallback: `game.nes`, `game (2).nes`, `game (3).nes`
+- Enhanced logging: All rename decisions logged for transparency
+- Post-processing validation: Actual file count verification
+
 ### Windows Compatibility Issues - RESOLVED
 **Status**: ✅ **FULLY RESOLVED** as of commits 9bcd65a, 15a1743, and 047c61b  
 **Impact**: Script now successfully copies files on Windows and Linux instead of reporting "0 files copied"
