@@ -4,7 +4,39 @@ For general project information, see [README.md](README.md).
 
 ## ✅ RECENT CRITICAL FIXES - August 2025
 
-### **NEW** Duplicate Filename Overwriting Bug - RESOLVED
+### **LATEST** File Count Mismatch Double-Counting Bug - RESOLVED
+**Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
+**Impact**: Fixes critical statistics bug causing file count discrepancies and missing file validation
+
+**Problem Discovered:**
+- User reported 50,703 files processed but only 48,594 actually in target directory (2,109 discrepancy)
+- Statistics showed 0 renamed duplicates despite large dataset with duplicate-prone filenames
+- Folder creation count showed 0 despite creating 52+ platform directories
+- Critical warnings not being logged to summary files
+
+**Root Cause:** Lines 1313 and 1351 - Double-counting bug where renamed files were counted BOTH as renamed AND as copied
+```python
+# Line 1313: Count as renamed (correct)
+folder_renamed += 1
+# Line 1351: ALSO count as copied (BUG - double counting!)
+folder_copied += 1
+```
+
+**Solution Implemented:**
+- ✅ **Fixed Double-Counting**: Renamed files no longer counted twice in statistics
+- ✅ **Enhanced Logging**: Count mismatch warnings now logged to summary files
+- ✅ **Complete Statistics Logging**: Final success statistics captured in logs
+- ✅ **Improved Display**: Better organized file statistics with total discovered files
+- ✅ **Thread Count Update**: Windows default increased from 2 to 3 threads for better performance
+- ✅ **Comprehensive Issue Tracking**: All bugs documented in `.issues/` directory
+
+**Technical Details:**
+- Modified line 1351 to exclude renamed files from `folder_copied` count
+- Added comprehensive logging for all critical terminal output
+- Improved file statistics display organization and clarity
+- Updated default thread count based on user testing results
+
+### **PREVIOUS** Duplicate Filename Overwriting Bug - RESOLVED
 **Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
 **Impact**: Prevents data loss from files with identical names across source folders
 
@@ -119,6 +151,38 @@ python dat_to_shortcode_converter.py <source_dir> <target_dir> [options]
 ```
 
 ## Development Workflow
+
+### Issue Tracking Requirements - CRITICAL
+
+**MANDATORY**: All identified bugs and multi-step development tasks MUST be tracked systematically:
+
+#### Local Issues Register
+- **Create `.issues/LOCAL_ISSUE_*.md` files** for every identified bug or issue
+- **Use descriptive names**: `LOCAL_ISSUE_FILE_COUNT_MISMATCH.md`, `LOCAL_ISSUE_DUPLICATE_STATS_BUG.md`
+- **Include standard header**:
+  ```markdown
+  # Issue Title - Local Development Tracking
+  **Note**: This is internal development tracking, not a public GitHub issue  
+  **Status**: Active/Resolved | **GitHub Issue**: None/Link if exists
+  ```
+- **Document thoroughly**: Root cause analysis, technical investigation, solution approach
+- **Keep all resolved issue files** for historical reference and pattern recognition
+
+#### Task Roadmaps
+- **Create `.claude/tasks/YYYY-MM-DD-task-name.md` files** for multi-step implementations
+- **Update throughout development** with progress, learnings, and context
+- **Essential for handoff**: Enable future Claude sessions to continue work seamlessly
+- **Include**: Completed tasks, current status, key decisions, technical patterns, gotchas
+
+#### CLAUDE.md Updates
+- **Document all critical fixes** in the "Recent Critical Fixes" section
+- **Include technical details** sufficient for future development reference
+- **Link to issue files** when appropriate for detailed technical analysis
+
+This systematic approach prevents:
+- Repeated analysis of the same issues
+- Loss of critical technical context between sessions
+- Incomplete understanding of past decisions and solutions
 
 ### Testing Strategy
 

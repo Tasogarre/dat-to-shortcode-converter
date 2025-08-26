@@ -1109,7 +1109,7 @@ class PerformanceOptimizedROMProcessor:
         else:
             is_windows = platform.system() == 'Windows'
             if is_windows:
-                self.max_io_workers = 2  # Conservative for Windows
+                self.max_io_workers = 3  # Updated from 2 based on user testing
             else:
                 self.max_io_workers = 4  # More aggressive for Unix-like systems
         
@@ -1345,10 +1345,10 @@ class PerformanceOptimizedROMProcessor:
                                 if folder_dir_str not in stats.folders_created:
                                     stats.folders_created.add(folder_dir_str)
                                 
-                                # Count based on rename status
+                                # Count based on rename status - FIXED: Don't double-count renamed files
                                 if rename_reason and rename_reason.startswith("renamed_"):
-                                    # This is a renamed duplicate, don't count as replaced
-                                    folder_copied += 1
+                                    # This is a renamed duplicate, already counted in folder_renamed - don't double-count
+                                    pass  # Renamed files already counted at line 1313, don't count again as copied
                                 elif reason == "new_file":
                                     folder_copied += 1
                                 else:
@@ -2903,15 +2903,30 @@ Features:
             
             if unique_files_processed > 0:
                 print(f"\n🎉 Success! Processing Complete")
+                
+                # FIXED: Log final success statistics to summary log
+                organizer.logger_summary.info("🎉 SUCCESS: ROM Processing Complete")
+                organizer.logger_summary.info(f"📊 Final File Statistics:")
+                organizer.logger_summary.info(f"   📄 New files copied: {stats.files_copied:,}")
+                
                 print(f"\n📊 File Statistics:")
+                print(f"   📁 Total files discovered: {stats.files_found:,}")
+                print(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
                 print(f"   📄 New files copied: {stats.files_copied:,}")
                 if stats.files_renamed_duplicates > 0:
                     print(f"   📝 Duplicates renamed: {stats.files_renamed_duplicates:,} (prevented overwrites!)")
+                    organizer.logger_summary.info(f"   📝 Duplicates renamed: {stats.files_renamed_duplicates:,} (prevented overwrites!)")
                 if stats.files_replaced > 0:
                     print(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
-                if stats.files_skipped_duplicate > 0:
-                    print(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
-                print(f"   ✅ Total unique files processed: {unique_files_processed:,}")
+                    organizer.logger_summary.info(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
+                print(f"   ✅ Unique files copied: {unique_files_processed:,}")
+                
+                # Log comprehensive statistics
+                organizer.logger_summary.info(f"   📁 Total files discovered: {stats.files_found:,}")
+                organizer.logger_summary.info(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
+                if stats.files_replaced > 0:
+                    organizer.logger_summary.info(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
+                organizer.logger_summary.info(f"   ✅ Unique files copied: {unique_files_processed:,}")
                 
                 # Validation check (only if not dry run)
                 if not args.dry_run:
@@ -2922,6 +2937,11 @@ Features:
                             print(f"   ⚠️  WARNING: Count mismatch!")
                             print(f"      Expected: {unique_files_processed:,}")
                             print(f"      Found: {actual_files_in_target:,}")
+                            # FIXED: Log critical count mismatch warning to summary log
+                            organizer.logger_summary.warning(f"⚠️  CRITICAL: File count mismatch detected!")
+                            organizer.logger_summary.warning(f"Expected files processed: {unique_files_processed:,}")
+                            organizer.logger_summary.warning(f"Actual files in target: {actual_files_in_target:,}")
+                            organizer.logger_summary.warning(f"Discrepancy: {unique_files_processed - actual_files_in_target:,} files missing")
                     except Exception:
                         pass  # Don't fail on validation
                 
