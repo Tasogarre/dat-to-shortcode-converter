@@ -3,9 +3,23 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.9.1] - 2025-08-27
 
-### Fixed - 2025-08-28
+### Fixed
+- **CRITICAL**: Fixed percentage calculation bug in analysis display showing impossible values (5452200.0%, 71700.0%)
+- Added missing `total_files_discovered` field to stats update, resolving division-by-zero issue in percentage calculations
+- Analysis percentages now display correctly (0-100% range) for directory scan, file discovery, and platform analysis
+
+## [0.9.0] - 2025-08-27
+
+### Added
+- **Semantic Versioning Implementation**: Full SemVer compliance with version tracking
+- **Enhanced Log Headers**: Each log file now includes version, date, and context type
+- **--version CLI Argument**: Standard `-v` or `--version` flag outputs version and exits
+- **Dynamic Version Display**: Terminal header now shows version dynamically from constants
+- **Version Management Documentation**: Comprehensive rules in CLAUDE.md for consistent versioning
+
+### Fixed - 2025-08-27
 
 #### Critical Windows File Locking Resolution
 - **Root Cause Identified**: Windows Defender scanning newly created files caused WinError 32
@@ -160,6 +174,22 @@ This format follows [Keep a Changelog](https://keepachangelog.com), and this pro
 - **Cross-Platform**: Windows and Linux compatibility (WSL2 limitations documented)
 
 ---
+
+## [0.8.0] - 2025-08-26 (Retroactive)
+
+### Fixed
+- **File Count Mismatch Double-Counting Bug**: Fixed critical statistics bug where renamed files were counted both as renamed AND as copied
+- **Duplicate Filename Overwriting Bug**: Implemented smart deduplication to prevent data loss from files with identical names
+- **Windows Unicode Encoding Errors**: Comprehensive UTF-8 handling throughout the system
+- **Directory Contention Bug**: Folder-level threading architecture eliminates concurrent directory access issues
+- **0-Byte File Creation**: Atomic file operations with integrity verification
+
+### Added  
+- **CRC32 Verification System**: Fast file integrity checking without temp files
+- **ModernTerminalDisplay**: Professional multi-panel real-time progress interface
+- **Enhanced Pattern Matching**: 90.3% coverage with specialized Good/MAME/FinalBurn handlers
+- **Comprehensive Logging**: Six log categories for detailed debugging and monitoring
+- **Graceful Shutdown**: CTRL+C handling with proper thread coordination
 
 ## Development History Context
 

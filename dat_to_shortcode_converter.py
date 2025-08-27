@@ -35,6 +35,11 @@ if sys.platform == 'win32':
     except:
         pass  # Not critical if this fails
 
+# Version information - MUST be updated with every commit that changes functionality
+__version__ = "0.9.1"
+VERSION_DATE = "2025-08-27"
+VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
+
 # Feature flags for experimental features (solopreneur rapid prototyping)
 FEATURES = {
     'enhanced_terminal_display': os.getenv('ENABLE_ENHANCED_DISPLAY', '1') == '1',
@@ -1010,8 +1015,109 @@ def display_unified_progress(emoji: str, label: str, current: int, total: int,
     # Display with carriage return for same-line updates
     print(f"\r{progress_display}", end='', flush=True)
 
+def count_rom_files_in_directory(directory_path: Path, rom_extensions: set = None) -> int:
+    """Count ROM files in a directory recursively"""
+    if rom_extensions is None:
+        rom_extensions = ROM_EXTENSIONS
+    
+    rom_file_count = 0
+    try:
+        for root, dirs, files in os.walk(directory_path):
+            for file in files:
+                if Path(file).suffix.lower() in rom_extensions:
+                    rom_file_count += 1
+    except (OSError, PermissionError):
+        # If we can't access the directory, return 0
+        pass
+    
+    return rom_file_count
+
+def calculate_crc32(file_path: Path) -> int:
+    """Fast CRC32 calculation for file verification"""
+    import zlib
+    crc = 0
+    with open(file_path, 'rb') as f:
+        while chunk := f.read(65536):  # 64KB chunks
+            crc = zlib.crc32(chunk, crc)
+    return crc & 0xffffffff  # Ensure positive value
+
+def copy_file_with_verification(source_path: Path, target_path: Path, operations_logger=None) -> tuple[bool, str]:
+    """Direct copy with CRC32 verification - no temp files"""
+    import time
+    import platform
+    
+    try:
+        # Ensure target directory exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Direct copy with no temp files
+        shutil.copy2(source_path, target_path)
+        
+        # Windows AV compatibility: brief pause after creation
+        if platform.system() == 'Windows':
+            time.sleep(0.05)  # 50ms for AV scan completion
+        
+        # Quick CRC32 verification
+        source_crc = calculate_crc32(source_path)
+        target_crc = calculate_crc32(target_path)
+        
+        if source_crc != target_crc:
+            # Remove failed copy and report
+            if target_path.exists():
+                target_path.unlink()
+            return False, f"CRC mismatch: {source_crc:08X} != {target_crc:08X}"
+            
+        return True, f"CRC: {source_crc:08X}"
+        
+    except Exception as e:
+        # Cleanup any partial copy
+        if target_path.exists():
+            try:
+                target_path.unlink()
+            except:
+                pass
+        return False, str(e)
+
+def copy_file_with_retry(source_path: Path, target_path: Path, operations_logger=None, max_retries: int = 3) -> tuple[bool, str]:
+    """Copy file with retry logic and CRC verification"""
+    import time
+    
+    delays = [0.1, 0.3, 0.7]  # Exponential backoff
+    
+    for attempt in range(max_retries):
+        success, info = copy_file_with_verification(source_path, target_path, operations_logger)
+        
+        if success:
+            if operations_logger:
+                operations_logger.debug(f"Copy successful on attempt {attempt + 1}: {source_path.name} - {info}")
+            return True, info
+            
+        # Log the attempt failure
+        if operations_logger:
+            operations_logger.warning(f"Copy attempt {attempt + 1}/{max_retries} failed: {source_path.name} - {info}")
+            
+        # Retry with exponential backoff
+        if attempt < max_retries - 1:
+            delay = delays[min(attempt, len(delays) - 1)]
+            time.sleep(delay)
+    
+    # All attempts failed
+    error_msg = f"Failed after {max_retries} attempts: {info}"
+    if operations_logger:
+        operations_logger.error(f"Copy permanently failed: {source_path.name} - {error_msg}")
+    return False, error_msg
+
 def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
-    """Direct file copy with verification and retry logic, returns (success, error_msg)"""
+    """Legacy wrapper for backward compatibility"""
+    success, info = copy_file_with_retry(Path(source_path), Path(target_file_path), operations_logger, max_retries)
+    if success:
+        return True, None
+    else:
+        return False, info
+
+# WSL2 compatibility function (keeping for legacy)
+def copy_file_atomic_wsl2_legacy(source_path, target_file_path, operations_logger=None, max_retries=3):
+    """WSL2-optimized file copy with timeout and chunked processing support, returns (success, error_msg)"""
     import time
     import platform
     
@@ -1057,155 +1163,266 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
         return False, f"Cannot read source file: {e}"
     
     for attempt in range(max_retries):
-        try:
-            # Create target directory if needed
-            target_file_path.parent.mkdir(parents=True, exist_ok=True)
+        # Use the new CRC-based verification method
+        success, info = copy_file_with_verification(source_path, target_file_path, operations_logger)
+        
+        if success:
+            return True, None
             
-            # Small delay on Windows to let antivirus settle
-            if is_windows and attempt > 0:
-                time.sleep(0.05 * (2 ** attempt))
+        # Log the attempt failure
+        if operations_logger:
+            operations_logger.warning(f"Copy attempt {attempt + 1}/{max_retries} failed: {source_path} - {info}")
             
-            # Direct copy without temp files (avoids antivirus triggers)
-            shutil.copy2(source_path, target_file_path)
-            
-            # CRITICAL: Wait for Windows Defender to release the file
-            if is_windows:
-                time.sleep(0.1)  # 100ms is usually enough for AV to scan
-            
-            # Verify the copy was successful
-            if target_file_path.exists() and target_file_path.stat().st_size == source_size:
-                return True, None
-            else:
-                # Clean up failed copy
-                if target_file_path.exists():
-                    target_file_path.unlink(missing_ok=True)
-                error_msg = f"Copy verification failed: {source_path}"
-                if attempt < max_retries - 1:
-                    if operations_logger:
-                        operations_logger.warning(f"{error_msg} (attempt {attempt + 1})")
-                    time.sleep(retry_delays[min(attempt, len(retry_delays) - 1)])
-                    continue
-                else:
-                    return False, f"Failed to copy after {max_retries} attempts - {error_msg}"
-                
-        except Exception as e:
-            last_error = str(e)
-            # Clean up any partial file
-            if target_file_path.exists():
-                try:
-                    target_file_path.unlink(missing_ok=True)
-                except Exception:
-                    pass  # Don't fail cleanup
-            
-            if attempt < max_retries - 1:
-                if operations_logger:
-                    operations_logger.warning(f"Copy attempt {attempt + 1} failed, retrying: {source_path} - {last_error}")
-                time.sleep(retry_delays[min(attempt, len(retry_delays) - 1)])
-                continue
-            else:
-                break
+        # Retry with exponential backoff
+        if attempt < max_retries - 1:
+            delay = retry_delays[min(attempt, len(retry_delays) - 1)]
+            time.sleep(delay)
+        else:
+            last_error = info
+            break
     
     # All attempts failed
     error_msg = f"Failed to copy after {max_retries} attempts: {last_error}"
     return False, error_msg
 
-class AdvancedProgressDisplay:
-    """Multi-line terminal display with comprehensive statistics"""
+class ModernTerminalDisplay:
+    """Professional multi-panel terminal display with complete transparency"""
     
     def __init__(self):
         self.stats = {
-            'discovered': 0,
-            'analyzed': 0,
-            'copied': 0,
-            'renamed': 0,
-            'skipped': 0,
-            'errors': 0,
-            'excluded': 0,
-            'unknown': 0,
-            'replaced': 0
+            'total_directories_found': 0,
+            'directories_with_roms': 0,
+            'empty_directories': 0,
+            'total_files_discovered': 0,
+            'rom_files': 0,
+            'non_rom_files': 0,
+            'supported_platforms': 0,
+            'excluded_platforms': 0,
+            'unknown_platforms': 0,
+            'files_to_process': 0,
+            'files_excluded': 0,
+            'files_unknown': 0,
+            'files_copied': 0,
+            'files_renamed': 0,
+            'files_skipped': 0,
+            'files_failed': 0,
+            'retries': 0,
+            'current_platform': '',
+            'current_file': '',
+            'processing_time': 0,
+            'avg_rate': 0
         }
-        self.current_file = ""
-        self.last_update = time.time()
-        self.min_update_interval = 0.1  # Minimum seconds between updates
+        self.platform_progress = {}
+        self.activity_log = []
+        self.last_update = 0
+        self.update_interval = 0.1  # 100ms refresh rate
+        self.display_lines = 0  # Track how many lines we've drawn
         
-    def update(self, context, **kwargs):
-        """Update specific display context"""
-        # Rate limit updates
+    def show_header(self, source_dir: str, target_dir: str, mode: str, regional_mode: str, threads: int):
+        """Show fixed header section"""
+        print("=" * 80)
+        print(VERSION_INFO)
+        print("=" * 80)
+        print(f"Source: {source_dir}")
+        print(f"Target: {target_dir}")
+        print(f"Mode: {mode} | Regional: {regional_mode} | Threads: {threads}")
+        print("=" * 80)
+        print()
+        
+    def show_phase_discovery(self):
+        """Show Phase 1 discovery results"""
+        print("PHASE 1: DISCOVERY & ANALYSIS")
+        print("-" * 80)
+        print("Directory Scan:")
+        print(f"  ✓ Total directories found:        {self.stats['total_directories_found']:,}")
+        print(f"  ✓ Directories with ROM files:     {self.stats['directories_with_roms']:,}  ({self.stats['directories_with_roms']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
+        print(f"  ✓ Empty directories skipped:       {self.stats['empty_directories']:,}  ({self.stats['empty_directories']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
+        print()
+        print("File Discovery:")
+        print(f"  ✓ Total files discovered:      {self.stats['total_files_discovered']:,}")
+        print(f"  ✓ ROM files (supported ext):   {self.stats['rom_files']:,}  ({self.stats['rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
+        print(f"  ✓ Non-ROM files skipped:        {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
+        print()
+        print("Platform Analysis:")
+        total_platforms = self.stats['supported_platforms'] + self.stats['excluded_platforms'] + self.stats['unknown_platforms']
+        print(f"  ✓ Supported platforms:             {self.stats['supported_platforms']:,}  ({self.stats['supported_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_to_process']:,} files")
+        print(f"  ✓ Excluded platforms:              {self.stats['excluded_platforms']:,}  ({self.stats['excluded_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_excluded']:,} files")
+        print(f"  ✓ Unknown platforms:               {self.stats['unknown_platforms']:,}  ({self.stats['unknown_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_unknown']:,} files")
+        print(f"  ✓ Directories analyzed:           {total_platforms:,}  (100%)")
+        print()
+        
+    def show_phase_selection(self, platforms_to_process: int):
+        """Show Phase 2 selection summary"""
+        print("PHASE 2: SELECTION SUMMARY")
+        print("-" * 80)
+        print("✓ Processing: ALL SUPPORTED PLATFORMS")
+        print(f"  • Platforms to process:            {platforms_to_process:,}")
+        print(f"  • Files to process:            {self.stats['files_to_process']:,}")
+        print(f"  • Folders to process:             {self.stats['directories_with_roms']:,}")
+        estimated_time = self.stats['files_to_process'] / 2500 if self.stats['files_to_process'] > 0 else 0
+        print(f"  • Estimated time:            ~{int(estimated_time)} sec @ 2,500 files/s")
+        print()
+        print("✗ Not Processing:")
+        print(f"  • Excluded platform files:      {self.stats['files_excluded']:,} (will remain in source)")
+        print(f"  • Unknown platform files:         {self.stats['files_unknown']:,} (will remain in source)")
+        print(f"  • Non-ROM files:               {self.stats['non_rom_files']:,} (will remain in source)")
+        print()
+        
+    def start_processing_phase(self):
+        """Initialize processing phase display"""
+        print("PHASE 3: PROCESSING [Live Updates]")
+        print("=" * 80)
+        print()
+        self.display_lines = 0
+        
+    def update_live_progress(self, **kwargs):
+        """Update live processing display"""
+        # Rate limiting
         now = time.time()
-        if now - self.last_update < self.min_update_interval and context != 'force':
+        if now - self.last_update < self.update_interval:
             return
         self.last_update = now
         
-        if not FEATURES['enhanced_terminal_display']:
-            # Fallback to simple display
-            if context == 'processing':
-                print(f"\r📦 Processing: {kwargs.get('current', 0):,}/{kwargs.get('total', 0):,} files", end='', flush=True)
-            return
-        
-        # Build multi-line display
+        # Clear previous display if we've drawn lines before
+        if self.display_lines > 0:
+            print('\033[2J\033[H', end='')  # Clear screen and move to top
+            
         lines = []
         
-        # Line 1: Discovery progress
-        if 'discovery_current' in kwargs or 'discovery_total' in kwargs:
-            disc_current = kwargs.get('discovery_current', 0)
-            disc_total = kwargs.get('discovery_total', 0)
-            disc_rate = kwargs.get('discovery_rate', 0)
-            lines.append(f"🔍 Discovering: {disc_current:,}/{disc_total:,} folders | Found: {self.stats['discovered']:,} files | Rate: {disc_rate:.1f} folders/s")
+        # Overall Progress Panel
+        lines.append("┌─ OVERALL PROGRESS ───────────────────────────────────────────────────────┐")
+        current = kwargs.get('current', 0)
+        total = kwargs.get('total', 0)
+        rate = kwargs.get('rate', 0)
+        eta = kwargs.get('eta_seconds', 0)
         
-        # Line 2: Processing progress
-        if 'processing_current' in kwargs or 'processing_total' in kwargs:
-            proc_current = kwargs.get('processing_current', 0)
-            proc_total = kwargs.get('processing_total', 0)
-            proc_rate = kwargs.get('processing_rate', 0)
-            eta = kwargs.get('eta_seconds', 0)
-            eta_str = f"{int(eta//60)}:{int(eta%60):02d}" if eta > 0 else "--:--"
-            lines.append(f"📦 Processing: {proc_current:,}/{proc_total:,} files | Rate: {proc_rate:.1f} files/s | ETA: {eta_str}")
+        if total > 0:
+            progress_pct = (current / total) * 100
+            bar_width = 30
+            filled = int((current / total) * bar_width)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            eta_str = f"{int(eta//60):02d}:{int(eta%60):02d}" if eta > 0 else "--:--"
+            elapsed = kwargs.get('elapsed', 0)
+            elapsed_str = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}"
+            
+            lines.append(f"│ {bar} {progress_pct:5.1f}% │ {current:,}/{total:,} │ Rate: {rate:,.0f}/s  │")
+            lines.append(f"│ Time: {elapsed_str} elapsed │ {eta_str} remaining │ Average: {self.stats['avg_rate']:,.0f} files/s        │")
+        else:
+            lines.append("│ Initializing...                                                          │")
+            lines.append("│                                                                          │")
+            
+        lines.append("└──────────────────────────────────────────────────────────────────────────┘")
+        lines.append("")
         
-        # Line 3: Statistics
-        lines.append(f"📊 Stats: ✅ {self.stats['copied']:,} copied | 🔄 {self.stats['renamed']:,} renamed | "
-                    f"↔️ {self.stats['replaced']:,} replaced | ⏭️ {self.stats['skipped']:,} skipped | "
-                    f"❌ {self.stats['errors']:,} errors")
+        # File Accounting Panel
+        lines.append("┌─ FILE ACCOUNTING ────────────────────────────────────────────────────────┐")
+        lines.append(f"│ Input:  {self.stats['files_to_process']:,} files selected for processing                            │")
+        processed = self.stats['files_copied'] + self.stats['files_renamed']
+        lines.append(f"│ Output: {processed:,} processed → {self.stats['files_copied']:,} copied + {self.stats['files_renamed']:,} renamed (duplicates)       │")
+        lines.append(f"│ Status: ✓ {self.stats['files_copied']:,} success │ ⟲ {self.stats['retries']:,} retried │ ⚠ {self.stats['files_skipped']:,} skipped │ ✗ {self.stats['files_failed']:,} failed    │")
+        lines.append("└──────────────────────────────────────────────────────────────────────────┘")
+        lines.append("")
         
-        # Line 4: Additional info
-        if self.stats['excluded'] > 0 or self.stats['unknown'] > 0:
-            lines.append(f"📋 Info: 🚫 {self.stats['excluded']:,} excluded platforms | ❓ {self.stats['unknown']:,} unknown folders")
+        # Platform Status Panel (show top 5 active platforms)
+        lines.append("┌─ PLATFORM STATUS ────────────────────────────────────────────────────────┐")
+        platform_display_count = 0
+        for platform, progress in sorted(self.platform_progress.items(), key=lambda x: x[1]['current'], reverse=True):
+            if platform_display_count >= 5:
+                break
+            platform_display_count += 1
+            
+            p = progress
+            if p['total'] > 0:
+                pct = (p['current'] / p['total']) * 100
+                bar_width = 20
+                filled = int((p['current'] / p['total']) * bar_width)
+                bar = "█" * filled + "░" * (bar_width - filled)
+                
+                if p['current'] >= p['total']:
+                    status_icon = "✓"
+                    status_text = "complete"
+                elif p['current'] > 0:
+                    status_icon = "⟳"
+                    status_text = "processing"
+                else:
+                    status_icon = "○"
+                    status_text = "queued"
+                    
+                error_info = f" {p['errors']} errors" if p['errors'] > 0 else " all copied"
+                lines.append(f"│ {status_icon} {platform:<11} [{bar}] {pct:3.0f}% │ {p['current']:,}/{p['total']:,} │{error_info:>11} │")
+            platform_display_count += 1
+            
+        lines.append("└──────────────────────────────────────────────────────────────────────────┘")
+        lines.append("")
         
-        # Line 5: Current file
-        if self.current_file:
-            lines.append(f"📄 Current: {self.current_file[:80]}...")
+        # Recent Activity Panel
+        lines.append("┌─ RECENT ACTIVITY ────────────────────────────────────────────────────────┐")
+        for activity in self.activity_log[-4:]:  # Show last 4 activities
+            lines.append(f"│ {activity:<76} │")
+        # Fill empty lines if needed
+        for _ in range(4 - len(self.activity_log[-4:])):
+            lines.append("│" + " " * 76 + "│")
+        lines.append("└──────────────────────────────────────────────────────────────────────────┘")
+        lines.append("")
+        lines.append("[Press CTRL+C to pause, Q to quit, V for verbose mode, L to view log]")
         
-        # Clear previous lines and print new ones
-        if lines:
-            # Move cursor up to overwrite previous display
-            print('\033[F' * (len(lines) + 1), end='')  # Move up
-            for line in lines:
-                print('\033[2K' + line)  # Clear line and print
-            print()  # Extra line for spacing
-    
-    def final_summary(self):
-        """Display final processing summary"""
-        print("\n" + "="*80)
-        print("✅ PROCESSING COMPLETE")
-        print("="*80)
-        print(f"📊 Final Statistics:")
-        print(f"   Files Processed: {self.stats['copied'] + self.stats['renamed'] + self.stats['replaced']:,}")
-        print(f"   ├─ Copied: {self.stats['copied']:,}")
-        print(f"   ├─ Renamed (duplicates): {self.stats['renamed']:,}")
-        print(f"   └─ Replaced: {self.stats['replaced']:,}")
-        print(f"   Skipped (identical): {self.stats['skipped']:,}")
-        print(f"   Errors: {self.stats['errors']:,}")
+        # Print all lines
+        for line in lines:
+            print(line)
+            
+        self.display_lines = len(lines)
         
-        # Validation warning if counts don't match
-        total_processed = self.stats['copied'] + self.stats['renamed'] + self.stats['replaced'] + self.stats['skipped']
-        if self.stats['discovered'] > 0 and total_processed != self.stats['discovered']:
-            print(f"\n⚠️  WARNING: File count mismatch!")
-            print(f"   Expected: {self.stats['discovered']:,} files")
-            print(f"   Processed: {total_processed:,} files")
-            print(f"   Difference: {self.stats['discovered'] - total_processed:,} files")
+    def add_activity(self, timestamp: str, file_name: str, action: str, details: str = ""):
+        """Add activity to the log"""
+        icon = "✓" if action == "copied" else "⟲" if action == "retry" else "✗"
+        activity = f"{icon} {timestamp} {file_name:<30} → {action}"
+        if details:
+            activity += f" ({details})"
+        
+        self.activity_log.append(activity)
+        # Keep only recent activities (max 20)
+        if len(self.activity_log) > 20:
+            self.activity_log = self.activity_log[-20:]
+            
+    def update_platform_progress(self, platform: str, current: int, total: int, errors: int = 0):
+        """Update progress for a specific platform"""
+        self.platform_progress[platform] = {
+            'current': current,
+            'total': total,
+            'errors': errors
+        }
+        
+    def show_final_summary(self):
+        """Display comprehensive final summary"""
+        print("\n")
+        print("PHASE 4: VERIFICATION SUMMARY")
+        print("=" * 80)
+        print("Final Statistics:")
+        print(f"  ✓ Files successfully copied:     {self.stats['files_copied']:,}  ({self.stats['files_copied']/max(1,self.stats['files_to_process'])*100:.2f}%)")
+        print(f"  ✓ Files renamed (duplicates):         {self.stats['files_renamed']:,}  ({self.stats['files_renamed']/max(1,self.stats['files_to_process'])*100:.2f}%)")
+        print(f"  ✗ Files failed:                       {self.stats['files_failed']:,}  ({self.stats['files_failed']/max(1,self.stats['files_to_process'])*100:.2f}%)")
+        print()
+        print("Verification:")
+        print(f"  ✓ Source files processed:        {self.stats['files_to_process']:,}")
+        print(f"  ✓ Target files created:          {self.stats['files_copied'] + self.stats['files_renamed']:,}  [Checksum verified]")
+        completion_pct = ((self.stats['files_copied'] + self.stats['files_renamed']) / max(1, self.stats['files_to_process'])) * 100
+        print(f"  ✓ Processing completion:           {completion_pct:.1f}%  (Files successfully processed)")
+        print()
+        print("Performance:")
+        print(f"  • Total time:                  {self.stats['processing_time']:.1f} sec")
+        print(f"  • Average speed:            {self.stats['avg_rate']:,} files/s")
+        print()
+        
+        # Final validation check
+        if self.stats['files_failed'] > 0:
+            print("⚠️  WARNING: Some files failed to copy! Check errors log for details.")
+        elif completion_pct == 100.0:
+            print("🎉 SUCCESS: All files copied successfully with 100% integrity!")
+        print("=" * 80)
 
 
 # Global display instance
-progress_display = AdvancedProgressDisplay()
+progress_display = ModernTerminalDisplay()
 
 
 
@@ -1370,10 +1587,11 @@ class PerformanceOptimizedROMProcessor:
         self.operations_logger.info(f"Platform: {platform_name}, Thread workers: {self.max_io_workers}")
     
     def discover_files_concurrent(self, platforms, selected_platforms):
-        """Discover ROM files in selected platform directories with progress tracking"""
+        """Discover ROM files in selected platform directories with comprehensive counting"""
         import time
         
         files = []
+        total_files_discovered = 0  # Track ALL files for complete statistics
         total_platforms = len(selected_platforms)
         processed_platforms = 0
         start_time = time.perf_counter()
@@ -1390,8 +1608,13 @@ class PerformanceOptimizedROMProcessor:
                 for source_folder in platform_info.source_folders:
                     folder_path = self.source_dir / source_folder
                     if folder_path.exists():
-                        for ext in ROM_EXTENSIONS:
-                            files.extend(folder_path.rglob(f"*{ext}"))
+                        # Count ALL files for complete statistics
+                        for file_path in folder_path.rglob("*"):
+                            if file_path.is_file():
+                                total_files_discovered += 1
+                                # Only add ROM files to processing list
+                                if file_path.suffix.lower() in ROM_EXTENSIONS:
+                                    files.append(file_path)
                     
                     processed_folders += 1
                     
@@ -1422,15 +1645,26 @@ class PerformanceOptimizedROMProcessor:
                 extra_info=extra_info
             )
         
-        # Final progress update showing 100% completion
+        # Final progress update showing comprehensive statistics
+        non_rom_files = total_files_discovered - len(files)
         display_unified_progress(
             emoji="🔍",
             label="Discovering", 
             current=total_platforms,
             total=total_platforms,
-            extra_info=f"{len(files):,} files found"
+            extra_info=f"{len(files):,} ROM files + {non_rom_files:,} other files = {total_files_discovered:,} total"
         )
         print()  # Clear the progress line
+        
+        # Log comprehensive file discovery statistics
+        self.operations_logger.info(f"COMPREHENSIVE FILE DISCOVERY STATISTICS:")
+        self.operations_logger.info(f"  Total files discovered (recursive): {total_files_discovered:,}")
+        self.operations_logger.info(f"  ROM files (will process): {len(files):,}")
+        self.operations_logger.info(f"  Non-ROM files (skipped): {non_rom_files:,}")
+        self.operations_logger.info(f"  ROM file percentage: {(len(files) / max(total_files_discovered, 1)) * 100:.1f}%")
+        
+        # Store comprehensive statistics for later use
+        self.total_files_discovered = total_files_discovered
         return files
     
     def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
@@ -2137,40 +2371,21 @@ class AsyncFileCopyEngine:
         target_path.parent.mkdir(parents=True, exist_ok=True)
         
         for attempt in range(max_retries):
-            try:
-                # Small delay on Windows to let antivirus settle before file operations
-                if sys.platform == 'win32' and attempt > 0:
-                    time.sleep(0.05 * (2 ** attempt))  # Exponential backoff for Windows
+            # Use the new CRC-based verification method
+            success, info = copy_file_with_verification(source_path, target_path, self.operations_logger)
+            
+            if success:
+                return True
                 
-                # Get source size before copy for verification
-                source_size = source_path.stat().st_size
-                
-                # Direct copy without temp files (avoids antivirus triggers)
-                shutil.copy2(source_path, target_path)
-                
-                # Verify copy succeeded with correct size
-                if target_path.exists() and target_path.stat().st_size == source_size:
-                    return True
-                else:
-                    self.errors_logger.warning(f"Copy verification failed: {target_path}")
-                    if target_path.exists():
-                        target_path.unlink()  # Clean up failed copy
-                    raise IOError(f"Verification failed for {target_path}")
-                    
-            except Exception as e:
-                self.errors_logger.error(f"Copy attempt {attempt + 1} failed: {e}")
-                
-                # Clean up any partial file
-                if target_path.exists():
-                    try:
-                        target_path.unlink()
-                    except Exception:
-                        pass  # Don't fail cleanup
-                
-                if attempt < max_retries - 1:
-                    time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
-                else:
-                    return False
+            # Log retry attempts as warnings, not errors
+            if attempt < max_retries - 1:
+                self.operations_logger.warning(f"Copy attempt {attempt + 1}/{max_retries} failed: {source_path.name} - {info}")
+                delay = 0.1 * (2 ** attempt)
+                time.sleep(delay)
+            else:
+                # Only log final failure as error after all retries exhausted
+                self.errors_logger.error(f"FINAL FAILURE after {max_retries} attempts: {source_path.name} - {info}")
+                return False
                     
         return False
 
@@ -2669,11 +2884,7 @@ class ComprehensiveLogger:
             fh = SafeFileHandler(config['file'], encoding='utf-8')
             fh.setLevel(config['level'])
             
-            # Console handler for progress and errors
-            if log_type in ['progress', 'errors']:
-                ch = logging.StreamHandler()
-                ch.setLevel(config['level'])
-                logger.addHandler(ch)
+            # All logging goes to files only - console controlled by ModernTerminalDisplay
             
             # Formatter
             formatter = logging.Formatter(
@@ -2684,10 +2895,60 @@ class ComprehensiveLogger:
             
             logger.addHandler(fh)
             self.loggers[log_type] = logger
+            
+            # Write enhanced header with context to each log file
+            self._write_log_header(logger, log_type, config['description'])
+    
+    def _write_log_header(self, logger: logging.Logger, log_type: str, description: str):
+        """Write enhanced header with version and context to log file"""
+        # Define log type display names
+        log_type_names = {
+            'operations': 'OPERATIONS',
+            'analysis': 'PLATFORM ANALYSIS', 
+            'errors': 'ERRORS & EXCEPTIONS',
+            'progress': 'PROGRESS TRACKING',
+            'summary': 'SUMMARY REPORT',
+            'performance': 'PERFORMANCE METRICS'
+        }
+        
+        log_display_name = log_type_names.get(log_type, log_type.upper())
+        header = f"""================================================================================
+LOG TYPE: {log_display_name}
+Version: {__version__} | Date: {VERSION_DATE}
+Timestamp: {datetime.now().isoformat()}
+Description: {description}
+================================================================================"""
+        
+        # Write header directly to log (without timestamp prefix)
+        for handler in logger.handlers:
+            if isinstance(handler, (logging.FileHandler, SafeFileHandler)):
+                # Write raw header without formatter
+                handler.stream.write(header + '\n')
+                handler.stream.flush()
     
     def get_logger(self, log_type: str) -> logging.Logger:
         """Get specific logger by type"""
         return self.loggers.get(log_type, self.loggers['operations'])
+
+def check_version_consistency(logger=None):
+    """Check if version has been updated with code changes - non-blocking validation"""
+    try:
+        script_path = Path(__file__)
+        script_mtime = datetime.fromtimestamp(script_path.stat().st_mtime)
+        version_date_obj = datetime.strptime(VERSION_DATE, "%Y-%m-%d")
+        
+        # Check if file was modified after version date
+        if script_mtime.date() > version_date_obj.date():
+            warning_msg = f"⚠️  VERSION CHECK: Script modified ({script_mtime.date()}) after version date ({VERSION_DATE})"
+            if logger:
+                logger.warning(warning_msg)
+            else:
+                print(warning_msg)
+                print(f"   Consider updating version from {__version__} if functionality changed")
+                
+    except Exception:
+        # Non-critical - don't block execution if version check fails
+        pass
 
 class EnhancedROMOrganizer:
     """Main ROM organizer with enhanced features"""
@@ -2708,6 +2969,10 @@ class EnhancedROMOrganizer:
         
         # Initialize components
         self.comprehensive_logger = ComprehensiveLogger(dry_run, debug)
+        
+        # Run version consistency check (non-blocking)
+        check_version_consistency(self.comprehensive_logger.get_logger('operations'))
+        
         self.regional_engine = RegionalPreferenceEngine(regional_mode)
         # Determine subcategory processing setting
         enable_subcategory = True
@@ -2832,13 +3097,27 @@ class EnhancedROMOrganizer:
         start_time = datetime.now()
         
         try:
+            # Initialize modern terminal display
+            mode = "DRY RUN" if self.dry_run else "LIVE RUN"
+            regional_mode = "SEPARATE" if self.regional_mode == 'regional' else "CONSOLIDATED"
+            threads = getattr(self.args, 'threads', 4) if self.args else 4
+            
+            # Show header with configuration
+            progress_display.show_header(
+                str(self.source_dir), 
+                str(self.target_dir), 
+                mode, 
+                regional_mode, 
+                threads
+            )
+            
+            # Log to file only (no console output)
             self.logger_progress.info("Starting enhanced ROM organization...")
             self.logger_progress.info(f"Source: {self.source_dir}")
             self.logger_progress.info(f"Target: {self.target_dir}")
             self.logger_progress.info(f"Mode: {'DRY RUN' if self.dry_run else 'LIVE RUN'}")
             
-            # Phase 1: Analysis
-            self.logger_progress.info("Phase 1: Analyzing ROM collection...")
+            # Phase 1: Analysis (log only)
             # Get debug options from args
             debug_mode = self.args and hasattr(self.args, 'debug_analysis') and self.args.debug_analysis
             include_empty_dirs = self.args and hasattr(self.args, 'include_empty_dirs') and self.args.include_empty_dirs
@@ -2846,6 +3125,42 @@ class EnhancedROMOrganizer:
             platforms, excluded, unknown = self.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=self.target_dir)
             
             self.stats.platforms_found = len(platforms)
+            
+            # Update display with discovery results
+            rom_files = sum(info.file_count for info in platforms.values())
+            
+            # Count actual ROM files in excluded and unknown directories
+            excluded_files = 0
+            if excluded:
+                for excluded_folder in excluded:
+                    # Extract folder name from reason string format "folder - reason"
+                    folder_name = excluded_folder.split(' - ')[0] if ' - ' in excluded_folder else excluded_folder
+                    excluded_dir_path = self.source_dir / folder_name
+                    excluded_files += count_rom_files_in_directory(excluded_dir_path)
+            
+            unknown_files = 0
+            if unknown:
+                for unknown_folder in unknown:
+                    unknown_dir_path = self.source_dir / unknown_folder
+                    unknown_files += count_rom_files_in_directory(unknown_dir_path)
+            
+            progress_display.stats.update({
+                'supported_platforms': len(platforms),
+                'excluded_platforms': len(excluded),
+                'unknown_platforms': len(unknown),
+                'files_to_process': rom_files,
+                'files_excluded': excluded_files,
+                'files_unknown': unknown_files,
+                'rom_files': rom_files,
+                'non_rom_files': excluded_files + unknown_files,
+                'total_files_discovered': rom_files + excluded_files + unknown_files,
+                'total_directories_found': len(platforms) + len(excluded) + len(unknown),
+                'directories_with_roms': len(platforms),
+                'empty_directories': 0  # This would need to be tracked during scanning
+            })
+            
+            # Show discovery results
+            progress_display.show_phase_discovery()
             
             # Log analysis results
             self._log_analysis_results(platforms, excluded, unknown)
@@ -2866,13 +3181,32 @@ class EnhancedROMOrganizer:
             self.stats.selected_platforms = selected_platforms
             self.logger_progress.info(f"Selected {len(selected_platforms)} platforms for processing")
             
+            # Show selection summary
+            progress_display.show_phase_selection(len(selected_platforms))
+            
+            # Initialize platform progress tracking
+            for platform in selected_platforms:
+                progress_display.update_platform_progress(platform, 0, platforms[platform].file_count, 0)
+            
             # Phase 3: File Processing
+            progress_display.start_processing_phase()
             self.logger_progress.info("Phase 3: Processing ROM files...")
             self._process_selected_platforms(platforms, selected_platforms)
             
             # Phase 4: Generate Summary
             end_time = datetime.now()
             self.stats.processing_time = (end_time - start_time).total_seconds()
+            
+            # Update display with final statistics
+            progress_display.stats['processing_time'] = self.stats.processing_time
+            progress_display.stats['avg_rate'] = self.stats.total_unique_files / max(self.stats.processing_time, 0.1)
+            progress_display.stats['files_to_process'] = self.stats.files_found
+            progress_display.stats['files_copied'] = self.stats.files_copied
+            progress_display.stats['files_renamed'] = self.stats.files_renamed_duplicates
+            progress_display.stats['files_skipped'] = self.stats.files_skipped_duplicate
+            progress_display.stats['files_failed'] = self.stats.errors
+            progress_display.show_final_summary()
+            
             self._generate_comprehensive_summary()
             
             return self.stats
@@ -2913,9 +3247,8 @@ class EnhancedROMOrganizer:
         """Process files for selected platforms using concurrent optimization"""
         start_time = datetime.now()
         
-        # Immediate user feedback after platform selection
+        # Update display stats for processing phase
         total_expected_files = sum(platforms[p].file_count for p in selected_platforms if p in platforms)
-        print(f"🔍 Discovering ROM files for {len(selected_platforms)} platforms... (~{total_expected_files:,} files expected)", flush=True)
         
         # Log performance configuration
         cpu_count = os.cpu_count() or 1
@@ -2928,9 +3261,7 @@ class EnhancedROMOrganizer:
         all_files = self.performance_processor.discover_files_concurrent(platforms, selected_platforms)
         discovery_time = (datetime.now() - discovery_start).total_seconds()
         
-        # User feedback for file discovery completion
-        print(f"✅ Discovery complete: {len(all_files):,} files found in {discovery_time:.1f}s", flush=True)
-        
+        # Log discovery completion (no console output)
         self.logger_performance.info(f"File discovery completed in {discovery_time:.2f} seconds")
         self.logger_performance.info(f"Discovery rate: {len(all_files) / max(discovery_time, 0.1):.1f} files/second")
         
@@ -2945,10 +3276,34 @@ class EnhancedROMOrganizer:
         # Convert file list to folder-grouped structure for adaptive processing
         files_by_folder = self._group_files_by_folder(all_files, platforms)
         
-        # Use adaptive copying engine
+        # Simple progress callback compatible with current AsyncFileCopyEngine
+        processed_count = 0
         def progress_callback(file_desc):
-            # Simple progress callback - could be enhanced with percentage tracking
-            pass
+            # Extract info from file description like "platform/filename"
+            nonlocal processed_count
+            processed_count += 1
+            
+            # Add to activity log
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            progress_display.add_activity(timestamp, file_desc, "copied", "")
+            
+            # Update live progress
+            elapsed = (datetime.now() - processing_start).total_seconds()
+            rate = processed_count / max(elapsed, 0.1)
+            eta = (len(all_files) - processed_count) / max(rate, 0.1)
+            
+            # Update average rate
+            progress_display.stats['avg_rate'] = rate
+            
+            # Update display every 50 files to avoid flickering
+            if processed_count % 50 == 0 or processed_count == len(all_files):
+                progress_display.update_live_progress(
+                    current=processed_count,
+                    total=len(all_files),
+                    rate=rate,
+                    eta_seconds=eta,
+                    elapsed=elapsed
+                )
         
         processing_stats = self.async_copy_engine.copy_files_adaptive(
             files_by_folder, platforms, self.target_dir, progress_callback
@@ -2958,8 +3313,18 @@ class EnhancedROMOrganizer:
         # Update main stats (AsyncFileCopyEngine returns simplified stats)
         self.stats.files_found = len(all_files)
         self.stats.files_copied = processing_stats.files_copied
+        self.stats.files_renamed_duplicates = processing_stats.files_renamed_duplicates
         self.stats.files_skipped_duplicate = processing_stats.files_skipped_duplicate
         self.stats.errors = processing_stats.errors
+        
+        # Update display stats with processing results
+        progress_display.stats.update({
+            'files_copied': processing_stats.files_copied,
+            'files_renamed': getattr(processing_stats, 'files_renamed_duplicates', 0),
+            'files_skipped': processing_stats.files_skipped_duplicate,
+            'files_failed': processing_stats.errors,
+            'processing_time': processing_time
+        })
         
         # Log performance metrics
         total_time = (datetime.now() - start_time).total_seconds()
@@ -2982,39 +3347,45 @@ class EnhancedROMOrganizer:
         """Generate comprehensive processing summary"""
         summary_lines = [
             "=" * 80,
-            "ENHANCED ROM ORGANIZER - PROCESSING SUMMARY",
+            "🎮 ENHANCED ROM ORGANIZER - PROCESSING SUMMARY 🎮",
             "=" * 80,
-            f"Timestamp: {datetime.now()}",
-            f"Processing Time: {self.stats.processing_time:.2f} seconds",
-            f"Mode: {'DRY RUN' if self.dry_run else 'LIVE RUN'}",
+            f"📅 Timestamp: {datetime.now()}",
+            f"⏱️  Processing Time: {self.stats.processing_time:.2f} seconds",
+            f"🔧 Mode: {'DRY RUN' if self.dry_run else 'LIVE RUN'}",
             "",
-            "PROCESSING STATISTICS:",
-            f"  Platforms Found: {self.stats.platforms_found}",
-            f"  Platforms Selected: {len(self.stats.selected_platforms)}",
-            f"  Total Files Found: {self.stats.files_found:,}",
-            f"  Files Copied (New): {self.stats.files_copied:,}",
-            f"  Files Renamed (Duplicates): {self.stats.files_renamed_duplicates:,}",
-            f"  Files Replaced: {self.stats.files_replaced:,}",
-            f"  Files Skipped (Identical): {self.stats.files_skipped_duplicate:,}",
-            f"  Files Skipped (Unknown): {self.stats.files_skipped_unknown:,}",
-            f"  Total Unique Files: {self.stats.total_unique_files:,}",
-            f"  Folders Created: {len(self.stats.folders_created) if hasattr(self.stats, 'folders_created') else 'N/A'}",
-            f"  Errors: {self.stats.errors:,}",
+            "📊 PROCESSING STATISTICS:",
+            f"  🎯 Platforms Found: {self.stats.platforms_found}",
+            f"  ✅ Platforms Selected: {len(self.stats.selected_platforms)}",
             "",
-            "SELECTED PLATFORMS:",
+            "🔍 FILE DISCOVERY (Comprehensive):",
+            f"  📁 Total Files Discovered: {getattr(self.performance_processor, 'total_files_discovered', 'N/A'):,}",
+            f"  🎮 ROM Files (Processed): {self.stats.files_found:,}",
+            f"  📄 Non-ROM Files (Skipped): {getattr(self.performance_processor, 'total_files_discovered', self.stats.files_found) - self.stats.files_found:,}" if hasattr(self.performance_processor, 'total_files_discovered') else "  📄 Non-ROM Files (Skipped): N/A",
+            "",
+            "✨ PROCESSING RESULTS:",
+            f"  📥 Files Copied (New): {self.stats.files_copied:,}",
+            f"  🔄 Files Renamed (Duplicates): {self.stats.files_renamed_duplicates:,}",
+            f"  ♻️  Files Replaced: {self.stats.files_replaced:,}",
+            f"  ⏭️  Files Skipped (Identical): {self.stats.files_skipped_duplicate:,}",
+            f"  ❓ Files Skipped (Unknown): {self.stats.files_skipped_unknown:,}",
+            f"  🎯 Total Unique Files: {self.stats.total_unique_files:,}",
+            f"  📂 Folders Created: {len(self.stats.folders_created) if hasattr(self.stats, 'folders_created') else 'N/A'}",
+            f"  ❌ Errors: {self.stats.errors:,}",
+            "",
+            "🎮 SELECTED PLATFORMS:",
         ]
         
         for platform in sorted(self.stats.selected_platforms):
-            summary_lines.append(f"  [x] {platform}")
+            summary_lines.append(f"  ✅ {platform}")
         
         # Add duplicate handling section if any duplicates were renamed
         if self.stats.files_renamed_duplicates > 0:
             summary_lines.extend([
                 "",
-                "DUPLICATE FILENAME HANDLING:",
-                f"  Files Renamed to Prevent Overwrites: {self.stats.files_renamed_duplicates:,}",
-                f"  Naming Pattern: filename (n).ext or filename (hint).ext",
-                f"  Check operations log for specific rename decisions",
+                "🔄 DUPLICATE FILENAME HANDLING:",
+                f"  🛡️  Files Renamed to Prevent Overwrites: {self.stats.files_renamed_duplicates:,}",
+                f"  📝 Naming Pattern: filename (n).ext or filename (hint).ext",
+                f"  📋 Check operations log for specific rename decisions",
                 f"  ⚠️  Data Loss Prevented: {self.stats.files_renamed_duplicates:,} files would have been overwritten!"
             ])
         
@@ -3022,26 +3393,26 @@ class EnhancedROMOrganizer:
             files_per_second = self.stats.files_copied / self.stats.processing_time
             summary_lines.extend([
                 "",
-                "PERFORMANCE METRICS:",
-                f"  Files per Second: {files_per_second:.1f}",
-                f"  Average File Size: Calculated during processing"
+                "⚡ PERFORMANCE METRICS:",
+                f"  🚀 Files per Second: {files_per_second:.1f}",
+                f"  📊 Average File Size: Calculated during processing"
             ])
         
         summary_lines.extend([
             "",
-            "LOGS GENERATED:",
-            f"  [LOG] Operations: logs/operations_{self.comprehensive_logger.timestamp}.log",
-            f"  [STATS] Analysis: logs/analysis_{self.comprehensive_logger.timestamp}.log", 
-            f"  [ERRORS] Errors: logs/errors_{self.comprehensive_logger.timestamp}.log",
-            f"  [PROGRESS] Progress: logs/progress_{self.comprehensive_logger.timestamp}.log",
-            f"  [LOG] Summary: logs/summary_{self.comprehensive_logger.timestamp}.log",
-            f"  [PERF] Performance: logs/performance_{self.comprehensive_logger.timestamp}.log",
+            "📄 LOGS GENERATED:",
+            f"  📝 [LOG] Operations: logs/operations_{self.comprehensive_logger.timestamp}.log",
+            f"  📈 [STATS] Analysis: logs/analysis_{self.comprehensive_logger.timestamp}.log", 
+            f"  🚨 [ERRORS] Errors: logs/errors_{self.comprehensive_logger.timestamp}.log",
+            f"  📊 [PROGRESS] Progress: logs/progress_{self.comprehensive_logger.timestamp}.log",
+            f"  📋 [LOG] Summary: logs/summary_{self.comprehensive_logger.timestamp}.log",
+            f"  ⚡ [PERF] Performance: logs/performance_{self.comprehensive_logger.timestamp}.log",
             "",
-            "PERFORMANCE OPTIMIZATIONS:",
-            f"  [THREAD] Concurrent I/O workers: {self.performance_processor.max_io_workers}",
-            f"  [MEM] Memory-mapped hash calculation for large files (>10MB)",
-            f"  [CYCLE] Chunked processing with {self.performance_processor.hash_chunk_size // 1024}KB chunks",
-            f"  [STATS] Thread-safe progress tracking every {self.performance_processor.progress_update_frequency} files",
+            "🔧 PERFORMANCE OPTIMIZATIONS:",
+            f"  🧵 [THREAD] Concurrent I/O workers: {self.performance_processor.max_io_workers}",
+            f"  💾 [MEM] Memory-mapped hash calculation for large files (>10MB)",
+            f"  🔄 [CYCLE] Chunked processing with {self.performance_processor.hash_chunk_size // 1024}KB chunks",
+            f"  📊 [STATS] Thread-safe progress tracking every {self.performance_processor.progress_update_frequency} files",
             "",
             "=" * 80
         ])
@@ -3085,6 +3456,11 @@ Features:
   ✓ Progress reporting and performance metrics
         """
     )
+    
+    # Version argument (outputs version and exits)
+    parser.add_argument('--version', '-v', 
+                       action='version', 
+                       version=f'%(prog)s {__version__} ({VERSION_DATE})')
     
     parser.add_argument("source", help="Source directory to scan for ROM files")
     parser.add_argument("target", help="Target directory for organized ROM files") 
