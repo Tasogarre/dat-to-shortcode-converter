@@ -1633,7 +1633,7 @@ class AsyncFileCopyEngine:
                         update_progress_callback(f"{platform_shortcode}/{target_file_path.name}")
                     
                     # Perform copy with retry logic
-                    success = self._copy_with_retry(source_path, target_file_path, platform_shortcode)
+                    success = self._copy_with_retry(source_path, target_file_path)
                     
                     if success:
                         stats.files_copied += 1
@@ -1798,7 +1798,7 @@ class AsyncFileCopyEngine:
                     # Copy file
                     if not self.dry_run:
                         if not target_file_path.exists():
-                            success = self._copy_with_retry(source_path, target_file_path, platform_shortcode)
+                            success = self._copy_with_retry(source_path, target_file_path)
                             if success:
                                 folder_copied += 1
                                 self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
@@ -1858,52 +1858,48 @@ class AsyncFileCopyEngine:
         print()  # Add newline after progress
         return stats
     
-    def _copy_with_retry(self, source_path: Path, target_file_path: Path, platform_shortcode: str) -> bool:
-        """Copy file with robust error recovery and skipping for problematic files"""
-        import time
+    def _copy_with_retry(self, source_path: Path, target_path: Path, max_retries: int = 3) -> bool:
+        """Copy file with retry logic avoiding temp files to prevent antivirus interference"""
         
-        if not self.dry_run and target_file_path.exists():
-            self.operations_logger.debug(f"File exists, skipping: {target_file_path}")
-            return True
-            
-        if self.dry_run:
-            self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
-            return True
+        # Ensure target directory exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Enhanced retry logic with progressive fallbacks
-        max_attempts = 2 if (is_wsl2_mount(source_path) or is_wsl2_mount(target_file_path)) else 3
-        
-        for attempt in range(max_attempts):
+        for attempt in range(max_retries):
             try:
-                # Log detailed attempt info for debugging
-                if attempt > 0:
-                    self.operations_logger.info(f"Retry attempt {attempt + 1} for: {source_path.name}")
+                # Small delay on Windows to let antivirus settle before file operations
+                if sys.platform == 'win32' and attempt > 0:
+                    time.sleep(0.05 * (2 ** attempt))  # Exponential backoff for Windows
                 
-                # Attempt copy using atomic method
-                success = copy_file_atomic(source_path, target_file_path, self.operations_logger, 1)  # Single attempt per retry
+                # Get source size before copy for verification
+                source_size = source_path.stat().st_size
                 
-                if success:
+                # Direct copy without temp files (avoids antivirus triggers)
+                shutil.copy2(source_path, target_path)
+                
+                # Verify copy succeeded with correct size
+                if target_path.exists() and target_path.stat().st_size == source_size:
                     return True
-                    
-                # Failed - log and wait before retry
-                if attempt < max_attempts - 1:
-                    wait_time = 2.0 * (attempt + 1)  # Progressive backoff: 2s, 4s
-                    self.operations_logger.warning(f"Copy failed, waiting {wait_time}s before retry: {source_path.name}")
-                    time.sleep(wait_time)
+                else:
+                    self.errors_logger.warning(f"Copy verification failed: {target_path}")
+                    if target_path.exists():
+                        target_path.unlink()  # Clean up failed copy
+                    raise IOError(f"Verification failed for {target_path}")
                     
             except Exception as e:
-                self.operations_logger.error(f"Exception during copy attempt {attempt + 1}: {source_path.name} - {str(e)}")
+                self.errors_logger.error(f"Copy attempt {attempt + 1} failed: {e}")
                 
-                if attempt < max_attempts - 1:
-                    wait_time = 3.0 * (attempt + 1)  # Progressive backoff for exceptions
-                    time.sleep(wait_time)
+                # Clean up any partial file
+                if target_path.exists():
+                    try:
+                        target_path.unlink()
+                    except Exception:
+                        pass  # Don't fail cleanup
+                
+                if attempt < max_retries - 1:
+                    time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
                 else:
-                    # Final attempt failed - log as skipped file
-                    self.operations_logger.error(f"SKIPPING FILE after {max_attempts} attempts: {source_path}")
-                    self.operations_logger.error(f"File details: size={source_path.stat().st_size:,} bytes, platform={platform_shortcode}")
-        
-        # All attempts failed - file will be skipped
-        self.operations_logger.error(f"All {max_attempts} copy attempts failed, file skipped: {source_path}")
+                    return False
+                    
         return False
 
 class PlatformAnalyzer:
