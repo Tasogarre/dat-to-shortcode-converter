@@ -2017,7 +2017,7 @@ class PlatformAnalyzer:
                 shortcode, display_name = platform_result
                 
                 if debug_mode:
-                    self.logger.debug(f"  ✅ Platform identified: {shortcode} ({display_name})")
+                    self.logger.debug(f"  [OK] Platform identified: {shortcode} ({display_name})")
                 
                 if shortcode not in platforms:
                     platforms[shortcode] = PlatformInfo(
@@ -2040,7 +2040,7 @@ class PlatformAnalyzer:
             else:
                 unknown.append(folder_name)
                 if debug_mode:
-                    self.logger.debug(f"  ❌ No platform match found")
+                    self.logger.debug(f"  [X] No platform match found")
         
         # Console progress feedback
         print(f"✅ Analysis complete: {directories_with_roms} directories with ROM files, {len(platforms)} platforms identified")
@@ -2083,7 +2083,7 @@ class PlatformAnalyzer:
             specialized_time = time.perf_counter() - specialized_start
             
             if debug_mode:
-                self.logger.debug(f"    STEP 1: Specialized patterns - {'✅ Match' if specialized_result else '❌ No match'}")
+                self.logger.debug(f"    STEP 1: Specialized patterns - {'[OK] Match' if specialized_result else '[X] No match'}")
             
             if specialized_result:
                 shortcode, display_name = specialized_result
@@ -2154,7 +2154,7 @@ class PlatformAnalyzer:
                     
                     # Log regular pattern matching
                     if debug_mode:
-                        self.logger.debug(f"    ✅ Pattern match #{pattern_index}: '{folder_name}' -> {shortcode} ({display_name})")
+                        self.logger.debug(f"    [OK] Pattern match #{pattern_index}: '{folder_name}' -> {shortcode} ({display_name})")
                         self.logger.debug(f"    Matching pattern: {pattern}")
                     self.logger.debug(f"Regular pattern matched: '{folder_name}' -> {shortcode} ({display_name}) [Pattern: {pattern}]")
                     
@@ -2171,7 +2171,7 @@ class PlatformAnalyzer:
             
             # STEP 4: No pattern matched
             if debug_mode:
-                self.logger.debug(f"    ❌ No regex patterns matched (tested {patterns_tested} patterns)")
+                self.logger.debug(f"    [X] No regex patterns matched (tested {patterns_tested} patterns)")
             
             self.performance_monitor.record_cache_miss("platform_identification")
             return None
@@ -2911,11 +2911,11 @@ Features:
                 print(f"   ✅ Unique files copied: {unique_files_processed:,}")
                 
                 # Log comprehensive statistics
-                organizer.logger_summary.info(f"   📁 Total files discovered: {stats.files_found:,}")
-                organizer.logger_summary.info(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
+                organizer.logger_summary.info(f"   [DIR] Total files discovered: {stats.files_found:,}")
+                organizer.logger_summary.info(f"   [SKIP] Files skipped (identical): {stats.files_skipped_duplicate:,}")
                 if stats.files_replaced > 0:
                     organizer.logger_summary.info(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
-                organizer.logger_summary.info(f"   ✅ Unique files copied: {unique_files_processed:,}")
+                organizer.logger_summary.info(f"   [OK] Unique files copied: {unique_files_processed:,}")
                 
                 # Validation check (only if not dry run)
                 if not args.dry_run:
@@ -2927,7 +2927,7 @@ Features:
                             print(f"      Expected: {unique_files_processed:,}")
                             print(f"      Found: {actual_files_in_target:,}")
                             # FIXED: Log critical count mismatch warning to summary log
-                            organizer.logger_summary.warning(f"⚠️  CRITICAL: File count mismatch detected!")
+                            organizer.logger_summary.warning(f"[WARNING] CRITICAL: File count mismatch detected!")
                             organizer.logger_summary.warning(f"Expected files processed: {unique_files_processed:,}")
                             organizer.logger_summary.warning(f"Actual files in target: {actual_files_in_target:,}")
                             organizer.logger_summary.warning(f"Discrepancy: {unique_files_processed - actual_files_in_target:,} files missing")
