@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -3285,7 +3285,7 @@ class EnhancedROMOrganizer:
                     if unknown_dir_path.exists():
                         # Count files with detailed logging
                         all_files = []
-                        rom_files = []
+                        folder_rom_files = []  # Local variable to avoid shadowing outer rom_files
                         extensions_found = set()
                         
                         try:
@@ -3295,12 +3295,12 @@ class EnhancedROMOrganizer:
                                     extension = Path(file).suffix.lower()
                                     extensions_found.add(extension)
                                     if extension in ROM_EXTENSIONS:
-                                        rom_files.append(file)
+                                        folder_rom_files.append(file)
                         except Exception as e:
                             self.analyzer.logger.error(f"    Error walking directory: {e}")
                             continue
                         
-                        folder_count = len(rom_files)
+                        folder_count = len(folder_rom_files)
                         unknown_files += folder_count
                         
                         # Log detailed results
@@ -3775,7 +3775,7 @@ Features:
                     if unknown_dir_path.exists():
                         # Count files with detailed logging
                         all_files = []
-                        rom_files = []
+                        folder_rom_files = []  # Local variable to avoid shadowing outer rom_files
                         extensions_found = set()
                         
                         try:
@@ -3785,12 +3785,12 @@ Features:
                                     extension = Path(file).suffix.lower()
                                     extensions_found.add(extension)
                                     if extension in ROM_EXTENSIONS:
-                                        rom_files.append(file)
+                                        folder_rom_files.append(file)
                         except Exception as e:
                             analyzer.logger.error(f"    Error walking directory: {e}")
                             continue
                         
-                        folder_count = len(rom_files)
+                        folder_count = len(folder_rom_files)
                         unknown_files_count += folder_count
                         
                         # Log detailed results

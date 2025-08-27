@@ -3,6 +3,23 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.1] - 2025-08-27
+
+### Fixed
+- **CRITICAL BUG**: Fixed variable name collision causing "can only concatenate list (not 'int') to list" error
+- **Root Cause**: Local `rom_files` variable in unknown files loop shadowed outer scope `rom_files` integer
+- Fixed variable shadowing in both interactive mode and analyze-only mode paths
+- Renamed conflicting local variable to `folder_rom_files` to avoid collision
+
+### Technical Details  
+- Line 3288: Changed `rom_files = []` to `folder_rom_files = []` (interactive mode)
+- Line 3298: Changed `rom_files.append(file)` to `folder_rom_files.append(file)` (interactive mode)  
+- Line 3303: Changed `len(rom_files)` to `len(folder_rom_files)` (interactive mode)
+- Lines 3778-3793: Applied same fixes to analyze-only mode path
+- This was a classic variable shadowing bug where the loop overwrote the outer scope integer with a list
+
+**BUG RESOLVED**: The "can only concatenate list (not 'int') to list" error is now completely fixed. The script should run successfully and show proper file statistics.
+
 ## [0.10.0] - 2025-08-27
 
 ### Added
