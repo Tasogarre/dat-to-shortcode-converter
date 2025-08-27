@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -2410,7 +2410,7 @@ class PlatformAnalyzer:
         # Initialize performance monitor for optimization tracking
         self.performance_monitor = PerformanceMonitor(self.logger)
         
-    def analyze_directory(self, debug_mode: bool = False, include_empty_dirs: bool = False, target_dir: Path = None) -> Tuple[Dict[str, PlatformInfo], List[str], List[str]]:
+    def analyze_directory(self, debug_mode: bool = False, include_empty_dirs: bool = False, target_dir: Path = None) -> Tuple[Dict[str, PlatformInfo], Dict[str, Tuple[str, int]], List[str]]:
         """
         Analyze source directory and categorize all content
         
@@ -2421,11 +2421,11 @@ class PlatformAnalyzer:
         
         Returns:
             - Dict of platform shortcode -> PlatformInfo
-            - List of excluded folders with reasons
+            - Dict of excluded folders: folder_name -> (reason, file_count)
             - List of unknown folders
         """
         platforms = {}
-        excluded = []
+        excluded = {}
         unknown = []
         
         self.logger.info(f"Analyzing directory: {self.source_dir}")
@@ -2507,7 +2507,7 @@ class PlatformAnalyzer:
             # Check for exclusions first
             exclusion_reason = self._check_exclusions(folder_name)
             if exclusion_reason:
-                excluded.append(f"{folder_name} - {exclusion_reason}")
+                excluded[folder_name] = (exclusion_reason, len(rom_files))
                 progress_display.stats['excluded'] = len(excluded)
                 if debug_mode:
                     self.logger.debug(f"  Excluded: {exclusion_reason}")
@@ -2735,7 +2735,7 @@ class InteractiveSelector:
         self.regional_engine = regional_engine or RegionalPreferenceEngine()
     
     def show_analysis_summary(self, platforms: Dict[str, PlatformInfo], 
-                            excluded: List[str], unknown: List[str]) -> None:
+                            excluded: Dict[str, Tuple[str, int]], unknown: List[str]) -> None:
         """Display comprehensive analysis summary"""
         print("\n" + "="*80)
         print("ROM COLLECTION ANALYSIS")
@@ -2760,8 +2760,14 @@ class InteractiveSelector:
         if excluded:
             print(f"\n⚠️  EXCLUDED PLATFORMS ({len(excluded)}):")
             print("-" * 50)
-            for item in excluded[:10]:  # Show first 10
-                print(f"    • {item}")
+            total_excluded_files = sum(file_count for reason, file_count in excluded.values())
+            print(f"     🎮 Total excluded files: {total_excluded_files:,}")
+            print()
+            items_shown = list(excluded.items())[:10]  # Show first 10
+            for folder_name, (reason, file_count) in items_shown:
+                print(f"    • {folder_name} - {reason}")
+                if file_count > 0:
+                    print(f"      🎮 {file_count:,} files")
             if len(excluded) > 10:
                 print(f"    ... and {len(excluded) - 10} more")
         
@@ -3132,11 +3138,7 @@ class EnhancedROMOrganizer:
             # Count actual ROM files in excluded and unknown directories
             excluded_files = 0
             if excluded:
-                for excluded_folder in excluded:
-                    # Extract folder name from reason string format "folder - reason"
-                    folder_name = excluded_folder.split(' - ')[0] if ' - ' in excluded_folder else excluded_folder
-                    excluded_dir_path = self.source_dir / folder_name
-                    excluded_files += count_rom_files_in_directory(excluded_dir_path)
+                excluded_files = sum(file_count for reason, file_count in excluded.values())
             
             unknown_files = 0
             if unknown:

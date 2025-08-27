@@ -3,6 +3,14 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.2] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Fixed excluded platform file counting bug - excluded platforms now show accurate file counts
+- Changed excluded platforms tracking from list to dict to store both reasons and file counts during analysis
+- Enhanced excluded platforms display to show individual platform file counts and total excluded files
+- Fixed broken path reconstruction when counting files in excluded directories
+
 ## [0.9.1] - 2025-08-27
 
 ### Fixed
