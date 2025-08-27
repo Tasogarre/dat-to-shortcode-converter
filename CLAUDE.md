@@ -664,3 +664,136 @@ with ThreadPoolExecutor(max_workers=min(len(files_by_folder), self.max_io_worker
 ---
 
 **Key principle:** The tool now achieves enhanced production-ready coverage (93.4%) through systematic three-tier pattern matching and comprehensive Good Tools support. Maintain this modular architecture while preserving the simplicity and portability that made it successful.
+
+## Solopreneur Development Workflow (Updated 2025-08-27)
+
+### Single-Branch Development Strategy
+**Core Principle**: ALL work happens on `develop` branch - no feature branches
+
+- **Workflow**: main (stable) → develop (all active work) → main (releases only)
+- **No feature branches**: Overhead without benefit for solo development
+- **Frequent micro-commits**: Every working change gets committed immediately
+- **Feature flags for experiments**: Use environment variables for toggles
+
+```python
+# Feature flags in code (already implemented)
+FEATURES = {
+    'advanced_file_locking': os.getenv('ENABLE_ADVANCED_LOCKING', '0') == '1',
+    'enhanced_terminal_display': os.getenv('ENABLE_ENHANCED_DISPLAY', '1') == '1',
+    'windows_av_evasion': os.getenv('ENABLE_AV_EVASION', '0') == '1'
+}
+```
+
+### Task Management with .claude/tasks/
+**CRITICAL**: Update task files AFTER EVERY significant change
+
+- **File naming**: `.claude/tasks/YYYY-MM-DD-task-name.md`
+- **Update frequency**: After creating/merging PRs, discovering issues, making decisions
+- **Essential content**:
+  - ✅ Completed work with outcomes
+  - 🔄 Current status and blockers
+  - 📝 Important decisions and rationale
+  - ⚡ Technical patterns established
+  - ⚠️ Gotchas and lessons learned
+
+**Example**:
+```markdown
+# 2025-08-27-windows-fixes.md
+
+## Progress
+- ✅ Encoding fixes (UTF-8 startup config)
+- ✅ Signal handling (graceful shutdown)
+- ✅ File locking (target-side synchronization)
+- 🔄 Terminal display (multi-line progress)
+
+## Key Decisions
+- Single develop branch (no feature branches)
+- Feature flags for experimental code
+- SafeFileHandler for log sanitization
+
+## Gotchas
+- Windows needs exclusive file creation (O_EXCL)
+- Antivirus requires delays between operations
+```
+
+### Rapid Prototyping Workflow (Explore → Plan → Implement)
+
+1. **Explore**: Analyze existing code before changes
+   - Use `grep`, `Read`, file discovery tools
+   - Understand current implementation
+   
+2. **Plan**: Outline approach
+   - Use `/plan` mode for complex changes
+   - Document in task files
+   
+3. **Implement**: Make changes with frequent commits
+   - Micro-commits for every working change
+   - Use descriptive commit messages
+   
+4. **Test**: Run validation
+   - Syntax check: `python -m py_compile dat_to_shortcode_converter.py`
+   - Help test: `python dat_to_shortcode_converter.py --help`
+   - Functional test with small dataset
+   
+5. **Document**: Update immediately
+   - CHANGELOG.md for user-facing changes
+   - CLAUDE.md for development guidance
+   - Task files for context preservation
+
+### Commit Message Format
+```
+<type>: <description>
+
+[optional body]
+```
+
+Types:
+- `fix:` Bug fixes
+- `feat:` New features  
+- `docs:` Documentation only
+- `refactor:` Code restructuring
+- `test:` Test additions/changes
+- `chore:` Maintenance tasks
+
+### Context Management for Claude Sessions
+
+**Clear context frequently**: Use `/clear` to reset when switching focus
+**Keep CLAUDE.md concise**: < 1000 lines, reference external docs
+**Session handoff**: Task files are critical for continuity
+
+### Testing Checklist
+
+Before committing:
+1. ✅ Syntax validation passes
+2. ✅ Help command works
+3. ✅ Dry-run mode functions
+4. ✅ No encoding errors in logs
+5. ✅ CTRL+C shutdown works gracefully
+6. ✅ File operations complete without locks
+
+### Issue Tracking
+
+**Local issues**: `.issues/LOCAL_ISSUE_*.md` for technical investigation
+**GitHub issues**: Only for user-facing problems or unresolved critical issues
+**Pattern**: Research locally → Resolve if possible → Create GitHub issue if needed
+
+### Windows-Specific Considerations
+
+1. **File Locking**: Use `TargetDirectorySynchronizer` for thread-safe operations
+2. **Encoding**: Force UTF-8 at startup, sanitize logs with `SafeFileHandler`
+3. **Antivirus**: Add delays between file operations (0.05s default)
+4. **Signals**: Handle SIGBREAK in addition to SIGINT/SIGTERM
+
+### Performance Optimization
+
+- **Threading**: Folder-level isolation prevents directory contention
+- **Feature flags**: Disable expensive features when not needed
+- **Progress updates**: Rate-limited to 0.1s intervals
+- **Logging**: Use SafeFileHandler to prevent encoding crashes
+
+### Documentation Maintenance
+
+**README.md**: General project info for all users
+**CLAUDE.md**: This file - Claude-specific development guidance
+**CHANGELOG.md**: User-facing changes following Keep a Changelog format
+**Task files**: Development context and decision history
