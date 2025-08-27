@@ -3,6 +3,18 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.4] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Fixed unknown platform files showing 0 in analyze-only mode despite showing correct counts in Platform Analysis section
+- Added debug logging to unknown files counting in analyze-only mode for transparency and troubleshooting
+
+### Enhanced
+- **Non-ROM File Transparency**: Added file type breakdown showing what types of files are being excluded (e.g., `.txt: 500, .jpg: 300`)
+- Enhanced terminal display to show top 5 non-ROM file types with counts when non-ROM files are present
+- Added comprehensive non-ROM file extension logging to operations logs for complete transparency
+- Users now see exactly what file types make up the "1,376 non-ROM files skipped" message
+
 ## [0.9.3] - 2025-08-27
 
 ### Fixed

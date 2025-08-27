@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.3"
+__version__ = "0.9.4"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1229,7 +1229,7 @@ class ModernTerminalDisplay:
         print("=" * 80)
         print()
         
-    def show_phase_discovery(self):
+    def show_phase_discovery(self, non_rom_extensions=None):
         """Show Phase 1 discovery results"""
         print("PHASE 1: DISCOVERY & ANALYSIS")
         print("-" * 80)
@@ -1242,6 +1242,19 @@ class ModernTerminalDisplay:
         print(f"  ✓ Total files discovered:      {self.stats['total_files_discovered']:,}")
         print(f"  ✓ ROM files (supported ext):   {self.stats['rom_files']:,}  ({self.stats['rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
         print(f"  ✓ Non-ROM files skipped:        {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
+        
+        # Show non-ROM file type breakdown if available
+        if non_rom_extensions and self.stats['non_rom_files'] > 0:
+            print(f"      File types: ", end="")
+            top_extensions = non_rom_extensions.most_common(5)
+            parts = []
+            for extension, count in top_extensions:
+                display_ext = extension if extension else "[no ext]"
+                parts.append(f"{display_ext}: {count:,}")
+            print(", ".join(parts))
+            if len(non_rom_extensions) > 5:
+                remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
+                print(f"      + {len(non_rom_extensions)-5} more types ({remaining:,} files)")
         print()
         print("Platform Analysis:")
         total_platforms = self.stats['supported_platforms'] + self.stats['excluded_platforms'] + self.stats['unknown_platforms']
@@ -1592,6 +1605,7 @@ class PerformanceOptimizedROMProcessor:
         
         files = []
         total_files_discovered = 0  # Track ALL files for complete statistics
+        non_rom_extensions = Counter()  # Track non-ROM file extensions for transparency
         total_platforms = len(selected_platforms)
         processed_platforms = 0
         start_time = time.perf_counter()
@@ -1612,9 +1626,13 @@ class PerformanceOptimizedROMProcessor:
                         for file_path in folder_path.rglob("*"):
                             if file_path.is_file():
                                 total_files_discovered += 1
+                                extension = file_path.suffix.lower()
                                 # Only add ROM files to processing list
-                                if file_path.suffix.lower() in ROM_EXTENSIONS:
+                                if extension in ROM_EXTENSIONS:
                                     files.append(file_path)
+                                else:
+                                    # Track non-ROM file extensions for transparency
+                                    non_rom_extensions[extension] += 1
                     
                     processed_folders += 1
                     
@@ -1663,8 +1681,21 @@ class PerformanceOptimizedROMProcessor:
         self.operations_logger.info(f"  Non-ROM files (skipped): {non_rom_files:,}")
         self.operations_logger.info(f"  ROM file percentage: {(len(files) / max(total_files_discovered, 1)) * 100:.1f}%")
         
+        # Log non-ROM file type breakdown for transparency
+        if non_rom_extensions:
+            self.operations_logger.info(f"NON-ROM FILE TYPE BREAKDOWN:")
+            # Sort by count (descending) and show top 10
+            top_extensions = non_rom_extensions.most_common(10)
+            for extension, count in top_extensions:
+                display_ext = extension if extension else "[no extension]"
+                self.operations_logger.info(f"  {display_ext}: {count:,} files")
+            if len(non_rom_extensions) > 10:
+                remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
+                self.operations_logger.info(f"  [Other extensions]: {remaining:,} files")
+        
         # Store comprehensive statistics for later use
         self.total_files_discovered = total_files_discovered
+        self.non_rom_extensions = non_rom_extensions
         return files
     
     def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
@@ -3176,7 +3207,9 @@ class EnhancedROMOrganizer:
             })
             
             # Show discovery results
-            progress_display.show_phase_discovery()
+            # Get non-ROM extensions data from processor if available
+            non_rom_extensions = getattr(self.processor, 'non_rom_extensions', None)
+            progress_display.show_phase_discovery(non_rom_extensions)
             
             # Log analysis results
             self._log_analysis_results(platforms, excluded, unknown)
@@ -3558,12 +3591,25 @@ Features:
             
             platforms, excluded, unknown, directory_stats = organizer.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=organizer.target_dir)
             
-            # Calculate unknown files count
+            # Calculate unknown files count  
             unknown_files_count = 0
             if unknown:
+                if debug_mode:
+                    print(f"DEBUG: Counting files in {len(unknown)} unknown folders...")
                 for unknown_folder in unknown:
                     unknown_dir_path = organizer.source_dir / unknown_folder
-                    unknown_files_count += count_rom_files_in_directory(unknown_dir_path)
+                    folder_count = count_rom_files_in_directory(unknown_dir_path)
+                    unknown_files_count += folder_count
+                    if debug_mode and folder_count > 0:
+                        print(f"DEBUG: {unknown_folder} -> {folder_count} ROM files")
+                if debug_mode:
+                    print(f"DEBUG: Total unknown files: {unknown_files_count}")
+                    # Also log to analysis for permanent record
+                    organizer.logger_analysis.info(f"DEBUG: Unknown files count calculation:")
+                    for unknown_folder in unknown:
+                        unknown_dir_path = organizer.source_dir / unknown_folder  
+                        folder_count = count_rom_files_in_directory(unknown_dir_path)
+                        organizer.logger_analysis.info(f"  {unknown_folder}: {folder_count} ROM files")
             
             organizer.selector.show_analysis_summary(platforms, excluded, unknown, unknown_files_count)
             
