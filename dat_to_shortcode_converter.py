@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.4"
+__version__ = "0.9.5"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -3207,9 +3207,9 @@ class EnhancedROMOrganizer:
             })
             
             # Show discovery results
-            # Get non-ROM extensions data from processor if available
-            non_rom_extensions = getattr(self.processor, 'non_rom_extensions', None)
-            progress_display.show_phase_discovery(non_rom_extensions)
+            # Note: Non-ROM extensions data is only available after file discovery (Phase 3)
+            # For Phase 1 analysis, we show basic counts without file type breakdown
+            progress_display.show_phase_discovery()
             
             # Log analysis results
             self._log_analysis_results(platforms, excluded, unknown)

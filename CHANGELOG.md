@@ -3,6 +3,18 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.5] - 2025-08-27
+
+### Fixed
+- **CRITICAL HOTFIX**: Fixed fatal `AttributeError: 'EnhancedROMOrganizer' object has no attribute 'processor'` crash
+- Removed premature access to non-ROM extensions data during Phase 1 analysis (data only available after file discovery in Phase 3)
+- Non-ROM file type breakdown now only shown during actual processing phase where the data is available
+
+### Technical Details
+- Fixed incorrect attribute reference from `self.processor` to `self.performance_processor`
+- Adjusted display timing for non-ROM file transparency feature to match data availability lifecycle
+- Maintains backward compatibility while preventing startup crash
+
 ## [0.9.4] - 2025-08-27
 
 ### Fixed
