@@ -5,6 +5,29 @@ This format follows [Keep a Changelog](https://keepachangelog.com), and this pro
 
 ## [Unreleased]
 
+### Fixed - 2025-08-28
+
+#### Critical Windows File Locking Resolution
+- **Root Cause Identified**: Windows Defender scanning newly created files caused WinError 32
+- **Simple Fix**: Added 100ms delay after copy but before verification
+- **Removed Complexity**: Deleted unnecessary TargetDirectorySynchronizer class
+- **Feature Flag Cleanup**: Removed confusing `advanced_file_locking` flag
+
+#### Progress State Management
+- **Folder Change**: Now uses `.processing_state/` instead of `.claude/tasks/`
+- **Optional Save**: Only creates folder when `ENABLE_PROGRESS_SAVE=1` (default OFF)
+- **Runtime Fix**: No folders created during normal execution
+
+#### Enhanced Terminal Display
+- **Analysis Phase Integration**: Real-time display of excluded/unknown counts during scanning
+- **Progress Format**: Shows `[current/total] - ✅ X platforms, ⚠️ Y excluded, ❓ Z unknown`
+- **Preserved Statistics**: All counts properly tracked and displayed
+
+#### Graceful Shutdown Improvements
+- **Executor Registration**: ThreadPoolExecutor properly registered with shutdown handler
+- **Timeout Handling**: Force shutdown if graceful shutdown exceeds 5 seconds
+- **Thread Coordination**: Proper cleanup of running threads on CTRL+C
+
 ### Fixed - 2025-08-27
 
 #### Windows Compatibility Suite
