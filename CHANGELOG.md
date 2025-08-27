@@ -3,6 +3,28 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.0] - 2025-08-27
+
+### Added
+- **Comprehensive Type Debugging**: Added detailed type analysis for list concatenation error diagnosis  
+- **Safe Excluded Files Processing**: Defensive programming to handle unexpected data types
+- **Enhanced Data Validation**: Validation when populating excluded platforms dictionary
+- **Fallback Error Handling**: Graceful degradation when data structure issues occur
+
+### Fixed
+- **Type Safety**: Added type checking before stats update to prevent "can only concatenate list (not 'int') to list" error
+- **Robust Excluded Files Calculation**: Safe unpacking with fallbacks for malformed data
+- **Debug Output**: Enhanced debug logging shows exact types and values causing errors
+
+### Technical Details
+- Added comprehensive type checking at line 3304-3323 before stats.update()  
+- Replaced sum() comprehension with safe iteration at lines 3231-3253
+- Added validation when storing excluded data at lines 2556-2567
+- Debug mode now shows data types and structures when errors occur
+- Fallback to excluded_files = 0 prevents crashes from data corruption
+
+**DEBUGGING ENHANCEMENT**: This version focuses on identifying and resolving the persistent list concatenation error through comprehensive type analysis and defensive programming.
+
 ## [0.9.9] - 2025-08-27
 
 ### Fixed

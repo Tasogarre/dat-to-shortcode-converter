@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.9"
+__version__ = "0.10.0"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -2553,10 +2553,17 @@ class PlatformAnalyzer:
             # Check for exclusions first
             exclusion_reason = self._check_exclusions(folder_name)
             if exclusion_reason:
-                excluded[folder_name] = (exclusion_reason, len(rom_files))
+                # Validation: ensure we store integer count, not list
+                file_count = len(rom_files)
+                if debug_mode and not isinstance(file_count, int):
+                    self.logger.error(f"ERROR: len(rom_files) returned {type(file_count)}, not int: {file_count}")
+                if debug_mode and not isinstance(rom_files, list):
+                    self.logger.error(f"ERROR: rom_files is {type(rom_files)}, not list: {rom_files}")
+                
+                excluded[folder_name] = (exclusion_reason, file_count)
                 progress_display.stats['excluded'] = len(excluded)
                 if debug_mode:
-                    self.logger.debug(f"  Excluded: {exclusion_reason}")
+                    self.logger.debug(f"  Excluded: {exclusion_reason} ({file_count} files)")
                 continue
                 
             # Try to identify platform
@@ -3228,7 +3235,29 @@ class EnhancedROMOrganizer:
             # Count actual ROM files in excluded and unknown directories
             excluded_files = 0
             if excluded:
-                excluded_files = sum(file_count for reason, file_count in excluded.values())
+                try:
+                    # Safe unpacking with type checking
+                    excluded_files = 0
+                    for folder_name, value in excluded.items():
+                        if isinstance(value, tuple) and len(value) == 2:
+                            reason, file_count = value
+                            if isinstance(file_count, int):
+                                excluded_files += file_count
+                            elif hasattr(file_count, '__len__'):  # If it's accidentally a list
+                                excluded_files += len(file_count)
+                                if debug_mode:
+                                    print(f"DEBUG: WARNING - {folder_name} had list instead of int: {file_count}")
+                            else:
+                                if debug_mode:
+                                    print(f"DEBUG: ERROR - {folder_name} has invalid file_count type: {type(file_count)}")
+                        else:
+                            if debug_mode:
+                                print(f"DEBUG: ERROR - {folder_name} has invalid structure: {value}")
+                except Exception as e:
+                    if debug_mode:
+                        print(f"DEBUG: ERROR unpacking excluded: {e}")
+                        print(f"DEBUG: excluded contents: {excluded}")
+                    excluded_files = 0
             
             # Calculate unknown files count with comprehensive debugging (same as analyze-only path)
             unknown_files = 0
@@ -3300,6 +3329,27 @@ class EnhancedROMOrganizer:
                     if unknown_files == 0 and len(unknown) > 0:
                         print(f"DEBUG: WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
                         print(f"DEBUG: This suggests either path issues or non-ROM file extensions")
+            
+            # DEBUG: Type checking before stats update to identify the list concatenation error
+            debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
+            if debug_mode:
+                print(f"\nDEBUG: TYPE ANALYSIS BEFORE STATS UPDATE")
+                print(f"DEBUG: Type of rom_files: {type(rom_files).__name__}, value: {rom_files}")
+                print(f"DEBUG: Type of excluded_files: {type(excluded_files).__name__}, value: {excluded_files}")
+                print(f"DEBUG: Type of unknown_files: {type(unknown_files).__name__}, value: {unknown_files}")
+                
+                # Check if excluded_files is somehow a list
+                if not isinstance(excluded_files, int):
+                    print(f"ERROR: excluded_files is not an int! It's {type(excluded_files)}")
+                    print(f"ERROR: excluded dict structure check:")
+                    for folder, value in excluded.items():
+                        print(f"    {folder}: {value} (type: {type(value)})")
+                        if isinstance(value, tuple) and len(value) == 2:
+                            print(f"      reason: {value[0]} (type: {type(value[0])})")
+                            print(f"      file_count: {value[1]} (type: {type(value[1])})")
+                    # Fallback to prevent crash
+                    excluded_files = 0
+                    print(f"DEBUG: Set excluded_files to 0 as fallback")
             
             progress_display.stats.update({
                 'supported_platforms': len(platforms),
