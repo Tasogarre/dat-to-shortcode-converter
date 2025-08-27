@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -2410,7 +2410,7 @@ class PlatformAnalyzer:
         # Initialize performance monitor for optimization tracking
         self.performance_monitor = PerformanceMonitor(self.logger)
         
-    def analyze_directory(self, debug_mode: bool = False, include_empty_dirs: bool = False, target_dir: Path = None) -> Tuple[Dict[str, PlatformInfo], Dict[str, Tuple[str, int]], List[str]]:
+    def analyze_directory(self, debug_mode: bool = False, include_empty_dirs: bool = False, target_dir: Path = None) -> Tuple[Dict[str, PlatformInfo], Dict[str, Tuple[str, int]], List[str], Dict[str, int]]:
         """
         Analyze source directory and categorize all content
         
@@ -2423,6 +2423,7 @@ class PlatformAnalyzer:
             - Dict of platform shortcode -> PlatformInfo
             - Dict of excluded folders: folder_name -> (reason, file_count)
             - List of unknown folders
+            - Dict of directory statistics
         """
         platforms = {}
         excluded = {}
@@ -2566,8 +2567,16 @@ class PlatformAnalyzer:
             self.logger.info(f"  Platforms identified: {len(platforms)}")
             self.logger.info(f"  Folders excluded: {len(excluded)}")
             self.logger.info(f"  Unknown folders: {len(unknown)}")
+        
+        # Create directory statistics summary
+        directory_stats = {
+            'total_processed': directories_processed,
+            'directories_with_roms': directories_with_roms,
+            'empty_directories': directories_skipped_roms,
+            'target_directories_skipped': directories_skipped_target
+        }
                 
-        return platforms, excluded, unknown
+        return platforms, excluded, unknown, directory_stats
     
     def _check_exclusions(self, folder_name: str) -> Optional[str]:
         """Check if folder should be excluded"""
@@ -2735,7 +2744,7 @@ class InteractiveSelector:
         self.regional_engine = regional_engine or RegionalPreferenceEngine()
     
     def show_analysis_summary(self, platforms: Dict[str, PlatformInfo], 
-                            excluded: Dict[str, Tuple[str, int]], unknown: List[str]) -> None:
+                            excluded: Dict[str, Tuple[str, int]], unknown: List[str], unknown_files: int = 0) -> None:
         """Display comprehensive analysis summary"""
         print("\n" + "="*80)
         print("ROM COLLECTION ANALYSIS")
@@ -2751,8 +2760,11 @@ class InteractiveSelector:
         print("="*80)
         
         if platforms:
+            total_supported_files = sum(info.file_count for info in platforms.values())
             print(f"\n✅ SUPPORTED PLATFORMS FOUND ({len(platforms)}):")
             print("-" * 50)
+            print(f"     🎮 Total supported files: {total_supported_files:,}")
+            print()
             for i, (shortcode, info) in enumerate(sorted(platforms.items()), 1):
                 print(f"[{i:2d}] {shortcode:<12} - {info.display_name}")
                 print(f"     📁 {info.folder_count} folders, 🎮 {info.file_count:,} files")
@@ -2774,6 +2786,8 @@ class InteractiveSelector:
         if unknown:
             print(f"\n❓ UNKNOWN PLATFORMS ({len(unknown)}):")
             print("-" * 50)
+            print(f"     🎮 Total unknown files: {unknown_files:,}")
+            print()
             for item in unknown[:10]:  # Show first 10
                 print(f"    • {item}")
             if len(unknown) > 10:
@@ -3128,7 +3142,7 @@ class EnhancedROMOrganizer:
             debug_mode = self.args and hasattr(self.args, 'debug_analysis') and self.args.debug_analysis
             include_empty_dirs = self.args and hasattr(self.args, 'include_empty_dirs') and self.args.include_empty_dirs
             
-            platforms, excluded, unknown = self.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=self.target_dir)
+            platforms, excluded, unknown, directory_stats = self.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=self.target_dir)
             
             self.stats.platforms_found = len(platforms)
             
@@ -3156,9 +3170,9 @@ class EnhancedROMOrganizer:
                 'rom_files': rom_files,
                 'non_rom_files': excluded_files + unknown_files,
                 'total_files_discovered': rom_files + excluded_files + unknown_files,
-                'total_directories_found': len(platforms) + len(excluded) + len(unknown),
-                'directories_with_roms': len(platforms),
-                'empty_directories': 0  # This would need to be tracked during scanning
+                'total_directories_found': directory_stats['total_processed'],
+                'directories_with_roms': directory_stats['directories_with_roms'],
+                'empty_directories': directory_stats['empty_directories']
             })
             
             # Show discovery results
@@ -3542,8 +3556,16 @@ Features:
             debug_mode = args.debug_analysis if hasattr(args, 'debug_analysis') else False
             include_empty_dirs = args.include_empty_dirs if hasattr(args, 'include_empty_dirs') else False
             
-            platforms, excluded, unknown = organizer.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=organizer.target_dir)
-            organizer.selector.show_analysis_summary(platforms, excluded, unknown)
+            platforms, excluded, unknown, directory_stats = organizer.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=organizer.target_dir)
+            
+            # Calculate unknown files count
+            unknown_files_count = 0
+            if unknown:
+                for unknown_folder in unknown:
+                    unknown_dir_path = organizer.source_dir / unknown_folder
+                    unknown_files_count += count_rom_files_in_directory(unknown_dir_path)
+            
+            organizer.selector.show_analysis_summary(platforms, excluded, unknown, unknown_files_count)
             
             # Show subcategory processing statistics if requested
             if args.subcategory_stats and organizer.analyzer.subcategory_processor:

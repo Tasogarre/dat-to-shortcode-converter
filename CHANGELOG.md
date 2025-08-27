@@ -3,6 +3,20 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.3] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Fixed directory counting discrepancies - now shows actual scanned directories instead of category totals
+- Fixed empty directories calculation using proper tracking during analysis
+- Enhanced platform display with total file counts for supported, excluded, and unknown platforms
+- Updated directory statistics to use actual processed count from analyze_directory method
+- Added comprehensive file count totals to all platform category headers
+
+### Enhanced
+- Supported Platforms now shows total supported files count in header
+- Excluded Platforms section enhanced with individual and total file counts
+- Unknown Platforms section now displays total unknown files count
+
 ## [0.9.2] - 2025-08-27
 
 ### Fixed
