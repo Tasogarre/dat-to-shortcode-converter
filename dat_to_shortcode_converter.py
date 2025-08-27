@@ -37,9 +37,8 @@ if sys.platform == 'win32':
 
 # Feature flags for experimental features (solopreneur rapid prototyping)
 FEATURES = {
-    'advanced_file_locking': os.getenv('ENABLE_ADVANCED_LOCKING', '0') == '1',
     'enhanced_terminal_display': os.getenv('ENABLE_ENHANCED_DISPLAY', '1') == '1',
-    'windows_av_evasion': os.getenv('ENABLE_AV_EVASION', '0') == '1',
+    'enable_progress_save': os.getenv('ENABLE_PROGRESS_SAVE', '0') == '1',  # OFF by default
     'debug_threading': os.getenv('DEBUG_THREADING', '0') == '1'
 }
 
@@ -118,12 +117,19 @@ class GracefulShutdownHandler:
             # Shutdown executor with timeout
             if self.executor:
                 print("   Waiting for threads to complete...")
-                self.executor.shutdown(wait=True, timeout=5.0)
+                try:
+                    self.executor.shutdown(wait=True, timeout=5.0)
+                except:
+                    # Force shutdown if timeout
+                    self.executor.shutdown(wait=False)
             
             # Clean up temp files
             self.cleanup_temp_files()
             
-            print("✅ Shutdown complete. Progress saved to .claude/tasks/resume_state.json")
+            if FEATURES['enable_progress_save']:
+                print("✅ Shutdown complete. Progress saved to .processing_state/resume_state.json")
+            else:
+                print("✅ Shutdown complete.")
             sys.exit(0)
         else:
             print("\n❌ Force quit requested. Terminating immediately...")
@@ -131,8 +137,11 @@ class GracefulShutdownHandler:
     
     def save_progress_state(self):
         """Save progress for potential resume"""
+        if not FEATURES['enable_progress_save']:
+            return  # Don't save unless explicitly enabled
+            
         try:
-            state_file = Path('.claude/tasks/resume_state.json')
+            state_file = Path('.processing_state/resume_state.json')
             state_file.parent.mkdir(parents=True, exist_ok=True)
             
             with open(state_file, 'w', encoding='utf-8') as f:
@@ -1059,6 +1068,10 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
             # Direct copy without temp files (avoids antivirus triggers)
             shutil.copy2(source_path, target_file_path)
             
+            # CRITICAL: Wait for Windows Defender to release the file
+            if is_windows:
+                time.sleep(0.1)  # 100ms is usually enough for AV to scan
+            
             # Verify the copy was successful
             if target_file_path.exists() and target_file_path.stat().st_size == source_size:
                 return True, None
@@ -1195,76 +1208,6 @@ class AdvancedProgressDisplay:
 progress_display = AdvancedProgressDisplay()
 
 
-class TargetDirectorySynchronizer:
-    """Prevents multiple threads from writing to same target directory simultaneously"""
-    
-    def __init__(self):
-        self.directory_locks = defaultdict(threading.Lock)
-        self.file_locks = defaultdict(threading.Lock)
-        self.antivirus_delay = 0.05 if sys.platform == 'win32' else 0.01
-        
-    def safe_copy(self, source_path, target_path, operations_logger=None):
-        """Thread-safe copy with Windows antivirus evasion"""
-        source_path = Path(source_path)
-        target_path = Path(target_path)
-        
-        # Get locks for both directory and specific file
-        dir_lock = self.directory_locks[str(target_path.parent)]
-        file_lock = self.file_locks[str(target_path)]
-        
-        with dir_lock:  # Serialize directory access
-            with file_lock:  # Prevent same-file collision
-                # Create parent directory if needed
-                target_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Windows-specific: Use exclusive file creation
-                if sys.platform == 'win32' and FEATURES['windows_av_evasion']:
-                    try:
-                        # Create file exclusively (fails if exists)
-                        fd = os.open(str(target_path), 
-                                   os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_BINARY)
-                        
-                        try:
-                            # Copy content through file descriptor
-                            with open(source_path, 'rb') as src:
-                                data = src.read()
-                                os.write(fd, data)
-                        finally:
-                            os.close(fd)
-                        
-                        # Brief delay for AV to scan
-                        time.sleep(self.antivirus_delay)
-                        
-                        # Copy metadata
-                        shutil.copystat(source_path, target_path)
-                        return True, None
-                        
-                    except FileExistsError:
-                        # File already exists, check if identical
-                        if calculate_sha1(source_path) == calculate_sha1(target_path):
-                            return False, "identical"
-                        else:
-                            # Different file, need to replace
-                            temp_path = target_path.with_suffix('.tmp' + str(uuid.uuid4())[:8])
-                            shutil.copy2(source_path, temp_path)
-                            temp_path.replace(target_path)  # Atomic replace
-                            return True, "replaced"
-                            
-                    except Exception as e:
-                        if operations_logger:
-                            operations_logger.error(f"Windows copy failed: {e}")
-                        return False, str(e)
-                else:
-                    # Unix-like systems or standard Windows copy
-                    try:
-                        shutil.copy2(source_path, target_path)
-                        return True, None
-                    except Exception as e:
-                        return False, str(e)
-
-
-# Global synchronizer instance
-target_synchronizer = TargetDirectorySynchronizer()
 
 
 def extract_folder_hint(folder_name: str) -> Optional[str]:
@@ -1655,18 +1598,14 @@ class PerformanceOptimizedROMProcessor:
                                 self.operations_logger.info("Shutdown requested, stopping processing")
                                 return
                             
-                            # Use target synchronizer for thread-safe copying
-                            if FEATURES['advanced_file_locking']:
-                                success, error_msg = target_synchronizer.safe_copy(source_path, target_file_path, self.operations_logger)
-                                if error_msg == "identical":
-                                    folder_skipped += 1
-                                    success = False  # Don't count as copied
-                                elif error_msg == "replaced":
-                                    folder_replaced += 1
-                                    success = True
-                            else:
-                                # Original atomic copy method
-                                success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
+                            # Use improved atomic copy method with proper timing
+                            success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
+                            if error_msg and "identical" in error_msg:
+                                folder_skipped += 1
+                                success = False  # Don't count as copied
+                            elif error_msg and "replaced" in error_msg:
+                                folder_replaced += 1
+                                success = True
                             
                             if success:
                                 # Track folder creation
@@ -1735,6 +1674,10 @@ class PerformanceOptimizedROMProcessor:
         self.operations_logger.info(f"Using {max_workers} threads for {len(files_by_folder)} folders")
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Register executor with shutdown handler for proper cleanup
+            if shutdown_handler:
+                shutdown_handler.executor = executor
+            
             # Submit one folder per thread
             futures = []
             for folder_path, folder_files in files_by_folder.items():
@@ -2279,6 +2222,11 @@ class PlatformAnalyzer:
         # Console progress feedback
         print(f"📁 Scanning ROM directories in: {self.source_dir}")
         
+        # Update progress display with initial stats
+        progress_display.stats['excluded'] = 0
+        progress_display.stats['unknown'] = 0
+        progress_display.stats['analyzed'] = 0
+        
         directories_processed = 0
         directories_skipped_roms = 0
         directories_skipped_target = 0
@@ -2298,8 +2246,13 @@ class PlatformAnalyzer:
             return platforms, excluded, unknown
         
         # Process each top-level directory and count ROM files recursively within each
-        for platform_dir in top_level_dirs:
+        total_dirs = len(top_level_dirs)
+        for idx, platform_dir in enumerate(top_level_dirs):
             directories_processed += 1
+            
+            # Update analysis progress display
+            if FEATURES['enhanced_terminal_display']:
+                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] - ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown", end='', flush=True)
             
             if debug_mode:
                 self.logger.debug(f"Processing top-level directory: {platform_dir}")
@@ -2340,6 +2293,7 @@ class PlatformAnalyzer:
             exclusion_reason = self._check_exclusions(folder_name)
             if exclusion_reason:
                 excluded.append(f"{folder_name} - {exclusion_reason}")
+                progress_display.stats['excluded'] = len(excluded)
                 if debug_mode:
                     self.logger.debug(f"  Excluded: {exclusion_reason}")
                 continue
@@ -2373,12 +2327,16 @@ class PlatformAnalyzer:
                     file_count=current.file_count + len(rom_files),
                     source_folders=current.source_folders + [str(platform_dir.relative_to(self.source_dir))]
                 )
+                progress_display.stats['analyzed'] = len(platforms)
             else:
                 unknown.append(folder_name)
+                progress_display.stats['unknown'] = len(unknown)
                 if debug_mode:
                     self.logger.debug(f"  [X] No platform match found")
         
         # Console progress feedback
+        if FEATURES['enhanced_terminal_display']:
+            print()  # Clear the progress line
         print(f"✅ Analysis complete: {directories_with_roms} directories with ROM files, {len(platforms)} platforms identified")
         if directories_skipped_roms > 0 or directories_skipped_target > 0:
             empty_note = " (including root source directory)" if directories_skipped_roms == 1 else ""
