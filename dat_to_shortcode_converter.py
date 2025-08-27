@@ -13,6 +13,36 @@ Features:
 - Comprehensive timestamped logging system
 """
 
+# CRITICAL: Force UTF-8 encoding for all I/O operations (must be before any imports)
+import sys
+import io
+import locale
+import os
+
+# Force UTF-8 for all I/O operations on Windows
+if sys.platform == 'win32':
+    # Windows-specific encoding fixes
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+    os.environ['PYTHONIOENCODING'] = 'utf-8:replace'
+    
+    # Try to set console code page to UTF-8 (may fail in some environments)
+    try:
+        import subprocess
+        result = subprocess.run(['chcp', '65001'], shell=True, capture_output=True, text=True)
+    except:
+        pass  # Not critical if this fails
+
+# Feature flags for experimental features (solopreneur rapid prototyping)
+FEATURES = {
+    'advanced_file_locking': os.getenv('ENABLE_ADVANCED_LOCKING', '0') == '1',
+    'enhanced_terminal_display': os.getenv('ENABLE_ENHANCED_DISPLAY', '1') == '1',
+    'windows_av_evasion': os.getenv('ENABLE_AV_EVASION', '0') == '1',
+    'debug_threading': os.getenv('DEBUG_THREADING', '0') == '1'
+}
+
 import os
 import sys
 import hashlib
@@ -25,6 +55,9 @@ import mmap
 import threading
 import time
 import random
+import signal
+import uuid
+import atexit
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Set, Optional, NamedTuple
@@ -34,10 +67,127 @@ import json
 from good_pattern_handler import SpecializedPatternProcessor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import queue
-from threading import Lock
+from threading import Lock, Event
 from subcategory_handler import SubcategoryProcessor
 from functools import wraps
 from collections import defaultdict
+
+
+# Global shutdown handler instance
+shutdown_handler = None
+
+
+class GracefulShutdownHandler:
+    """Handles graceful shutdown with thread coordination and progress preservation"""
+    
+    def __init__(self):
+        self.shutdown_event = Event()
+        self.executor = None
+        self.progress_state = {}
+        self.completed_files = set()
+        self.remaining_files = set()
+        self.force_count = 0
+        
+    def register(self):
+        """Register signal handlers for graceful shutdown"""
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
+        if sys.platform == 'win32':
+            # Windows-specific signal
+            try:
+                signal.signal(signal.SIGBREAK, self.handle_shutdown)
+            except AttributeError:
+                pass  # SIGBREAK might not be available
+        
+        # Register atexit handler for cleanup
+        atexit.register(self.cleanup)
+    
+    def handle_shutdown(self, signum, frame):
+        """Gracefully handle shutdown request"""
+        self.force_count += 1
+        
+        if self.force_count == 1:
+            print("\n\n⚠️  Graceful shutdown initiated (press Ctrl+C again to force quit)...")
+            
+            # Set shutdown event for all threads
+            self.shutdown_event.set()
+            
+            # Save current progress
+            self.save_progress_state()
+            
+            # Shutdown executor with timeout
+            if self.executor:
+                print("   Waiting for threads to complete...")
+                self.executor.shutdown(wait=True, timeout=5.0)
+            
+            # Clean up temp files
+            self.cleanup_temp_files()
+            
+            print("✅ Shutdown complete. Progress saved to .claude/tasks/resume_state.json")
+            sys.exit(0)
+        else:
+            print("\n❌ Force quit requested. Terminating immediately...")
+            sys.exit(1)
+    
+    def save_progress_state(self):
+        """Save progress for potential resume"""
+        try:
+            state_file = Path('.claude/tasks/resume_state.json')
+            state_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(state_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'timestamp': datetime.now().isoformat(),
+                    'progress': self.progress_state,
+                    'completed_files': list(self.completed_files),
+                    'remaining_files': list(self.remaining_files)
+                }, f, indent=2)
+        except Exception as e:
+            print(f"   Warning: Could not save progress state: {e}")
+    
+    def cleanup_temp_files(self):
+        """Clean up any temporary files"""
+        try:
+            # Clean up .tmp files in target directories
+            for temp_file in Path('.').rglob('*.tmp*'):
+                try:
+                    temp_file.unlink()
+                except:
+                    pass
+        except Exception:
+            pass
+    
+    def cleanup(self):
+        """Final cleanup on exit"""
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=False)
+            except:
+                pass
+    
+    def check_shutdown(self):
+        """Check if shutdown has been requested"""
+        return self.shutdown_event.is_set()
+
+
+class SafeFileHandler(logging.FileHandler):
+    """File handler that sanitizes output for safe logging"""
+    
+    def __init__(self, filename, mode='a', encoding='utf-8', delay=False):
+        super().__init__(filename, mode, encoding, delay)
+    
+    def emit(self, record):
+        """Emit a record with sanitized message"""
+        try:
+            msg = self.format(record)
+            # Replace problematic characters for logs (no Unicode arrows or emojis)
+            msg = msg.replace('→', '->').replace('←', '<-').replace('↑', '^').replace('↓', 'v')
+            # Remove emojis and other high Unicode characters for log files
+            msg = ''.join(c if ord(c) < 128 else '?' for c in msg)
+            self.stream.write(msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 
 class PerformanceMonitor:
@@ -946,6 +1096,177 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
     error_msg = f"Failed to copy after {max_retries} attempts: {last_error}"
     return False, error_msg
 
+class AdvancedProgressDisplay:
+    """Multi-line terminal display with comprehensive statistics"""
+    
+    def __init__(self):
+        self.stats = {
+            'discovered': 0,
+            'analyzed': 0,
+            'copied': 0,
+            'renamed': 0,
+            'skipped': 0,
+            'errors': 0,
+            'excluded': 0,
+            'unknown': 0,
+            'replaced': 0
+        }
+        self.current_file = ""
+        self.last_update = time.time()
+        self.min_update_interval = 0.1  # Minimum seconds between updates
+        
+    def update(self, context, **kwargs):
+        """Update specific display context"""
+        # Rate limit updates
+        now = time.time()
+        if now - self.last_update < self.min_update_interval and context != 'force':
+            return
+        self.last_update = now
+        
+        if not FEATURES['enhanced_terminal_display']:
+            # Fallback to simple display
+            if context == 'processing':
+                print(f"\r📦 Processing: {kwargs.get('current', 0):,}/{kwargs.get('total', 0):,} files", end='', flush=True)
+            return
+        
+        # Build multi-line display
+        lines = []
+        
+        # Line 1: Discovery progress
+        if 'discovery_current' in kwargs or 'discovery_total' in kwargs:
+            disc_current = kwargs.get('discovery_current', 0)
+            disc_total = kwargs.get('discovery_total', 0)
+            disc_rate = kwargs.get('discovery_rate', 0)
+            lines.append(f"🔍 Discovering: {disc_current:,}/{disc_total:,} folders | Found: {self.stats['discovered']:,} files | Rate: {disc_rate:.1f} folders/s")
+        
+        # Line 2: Processing progress
+        if 'processing_current' in kwargs or 'processing_total' in kwargs:
+            proc_current = kwargs.get('processing_current', 0)
+            proc_total = kwargs.get('processing_total', 0)
+            proc_rate = kwargs.get('processing_rate', 0)
+            eta = kwargs.get('eta_seconds', 0)
+            eta_str = f"{int(eta//60)}:{int(eta%60):02d}" if eta > 0 else "--:--"
+            lines.append(f"📦 Processing: {proc_current:,}/{proc_total:,} files | Rate: {proc_rate:.1f} files/s | ETA: {eta_str}")
+        
+        # Line 3: Statistics
+        lines.append(f"📊 Stats: ✅ {self.stats['copied']:,} copied | 🔄 {self.stats['renamed']:,} renamed | "
+                    f"↔️ {self.stats['replaced']:,} replaced | ⏭️ {self.stats['skipped']:,} skipped | "
+                    f"❌ {self.stats['errors']:,} errors")
+        
+        # Line 4: Additional info
+        if self.stats['excluded'] > 0 or self.stats['unknown'] > 0:
+            lines.append(f"📋 Info: 🚫 {self.stats['excluded']:,} excluded platforms | ❓ {self.stats['unknown']:,} unknown folders")
+        
+        # Line 5: Current file
+        if self.current_file:
+            lines.append(f"📄 Current: {self.current_file[:80]}...")
+        
+        # Clear previous lines and print new ones
+        if lines:
+            # Move cursor up to overwrite previous display
+            print('\033[F' * (len(lines) + 1), end='')  # Move up
+            for line in lines:
+                print('\033[2K' + line)  # Clear line and print
+            print()  # Extra line for spacing
+    
+    def final_summary(self):
+        """Display final processing summary"""
+        print("\n" + "="*80)
+        print("✅ PROCESSING COMPLETE")
+        print("="*80)
+        print(f"📊 Final Statistics:")
+        print(f"   Files Processed: {self.stats['copied'] + self.stats['renamed'] + self.stats['replaced']:,}")
+        print(f"   ├─ Copied: {self.stats['copied']:,}")
+        print(f"   ├─ Renamed (duplicates): {self.stats['renamed']:,}")
+        print(f"   └─ Replaced: {self.stats['replaced']:,}")
+        print(f"   Skipped (identical): {self.stats['skipped']:,}")
+        print(f"   Errors: {self.stats['errors']:,}")
+        
+        # Validation warning if counts don't match
+        total_processed = self.stats['copied'] + self.stats['renamed'] + self.stats['replaced'] + self.stats['skipped']
+        if self.stats['discovered'] > 0 and total_processed != self.stats['discovered']:
+            print(f"\n⚠️  WARNING: File count mismatch!")
+            print(f"   Expected: {self.stats['discovered']:,} files")
+            print(f"   Processed: {total_processed:,} files")
+            print(f"   Difference: {self.stats['discovered'] - total_processed:,} files")
+
+
+# Global display instance
+progress_display = AdvancedProgressDisplay()
+
+
+class TargetDirectorySynchronizer:
+    """Prevents multiple threads from writing to same target directory simultaneously"""
+    
+    def __init__(self):
+        self.directory_locks = defaultdict(threading.Lock)
+        self.file_locks = defaultdict(threading.Lock)
+        self.antivirus_delay = 0.05 if sys.platform == 'win32' else 0.01
+        
+    def safe_copy(self, source_path, target_path, operations_logger=None):
+        """Thread-safe copy with Windows antivirus evasion"""
+        source_path = Path(source_path)
+        target_path = Path(target_path)
+        
+        # Get locks for both directory and specific file
+        dir_lock = self.directory_locks[str(target_path.parent)]
+        file_lock = self.file_locks[str(target_path)]
+        
+        with dir_lock:  # Serialize directory access
+            with file_lock:  # Prevent same-file collision
+                # Create parent directory if needed
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Windows-specific: Use exclusive file creation
+                if sys.platform == 'win32' and FEATURES['windows_av_evasion']:
+                    try:
+                        # Create file exclusively (fails if exists)
+                        fd = os.open(str(target_path), 
+                                   os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_BINARY)
+                        
+                        try:
+                            # Copy content through file descriptor
+                            with open(source_path, 'rb') as src:
+                                data = src.read()
+                                os.write(fd, data)
+                        finally:
+                            os.close(fd)
+                        
+                        # Brief delay for AV to scan
+                        time.sleep(self.antivirus_delay)
+                        
+                        # Copy metadata
+                        shutil.copystat(source_path, target_path)
+                        return True, None
+                        
+                    except FileExistsError:
+                        # File already exists, check if identical
+                        if calculate_sha1(source_path) == calculate_sha1(target_path):
+                            return False, "identical"
+                        else:
+                            # Different file, need to replace
+                            temp_path = target_path.with_suffix('.tmp' + str(uuid.uuid4())[:8])
+                            shutil.copy2(source_path, temp_path)
+                            temp_path.replace(target_path)  # Atomic replace
+                            return True, "replaced"
+                            
+                    except Exception as e:
+                        if operations_logger:
+                            operations_logger.error(f"Windows copy failed: {e}")
+                        return False, str(e)
+                else:
+                    # Unix-like systems or standard Windows copy
+                    try:
+                        shutil.copy2(source_path, target_path)
+                        return True, None
+                    except Exception as e:
+                        return False, str(e)
+
+
+# Global synchronizer instance
+target_synchronizer = TargetDirectorySynchronizer()
+
+
 def extract_folder_hint(folder_name: str) -> Optional[str]:
     """Extract a short, meaningful identifier from folder name
     
@@ -1329,8 +1650,23 @@ class PerformanceOptimizedROMProcessor:
                             else:
                                 self.operations_logger.debug(f"Copying file: {target_file_path.name} (reason: {reason})")
                             
-                            # Perform atomic copy with improved error handling
-                            success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
+                            # Check for shutdown request
+                            if shutdown_handler and shutdown_handler.check_shutdown():
+                                self.operations_logger.info("Shutdown requested, stopping processing")
+                                return
+                            
+                            # Use target synchronizer for thread-safe copying
+                            if FEATURES['advanced_file_locking']:
+                                success, error_msg = target_synchronizer.safe_copy(source_path, target_file_path, self.operations_logger)
+                                if error_msg == "identical":
+                                    folder_skipped += 1
+                                    success = False  # Don't count as copied
+                                elif error_msg == "replaced":
+                                    folder_replaced += 1
+                                    success = True
+                            else:
+                                # Original atomic copy method
+                                success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
                             
                             if success:
                                 # Track folder creation
@@ -2370,10 +2706,9 @@ class ComprehensiveLogger:
             logger = logging.getLogger(log_type)
             logger.setLevel(config['level'])
             
-            # File handler with rotation (10MB max, 3 backup files)
-            max_bytes = 10 * 1024 * 1024  # 10MB
-            backup_count = 3
-            fh = RotatingFileHandler(config['file'], maxBytes=max_bytes, backupCount=backup_count)
+            # Use SafeFileHandler for sanitized output (no rotation for simplicity)
+            # Could extend SafeFileHandler to support rotation if needed
+            fh = SafeFileHandler(config['file'], encoding='utf-8')
             fh.setLevel(config['level'])
             
             # Console handler for progress and errors
@@ -2844,6 +3179,11 @@ Features:
     if not args.dry_run and not args.analyze_only:
         target_dir.mkdir(parents=True, exist_ok=True)
     
+    # Initialize global shutdown handler
+    global shutdown_handler
+    shutdown_handler = GracefulShutdownHandler()
+    shutdown_handler.register()
+    
     # Run organizer
     try:
         organizer = EnhancedROMOrganizer(
@@ -2855,6 +3195,10 @@ Features:
             debug=args.debug,
             args=args  # Pass args for subcategory processing options
         )
+        
+        # Pass shutdown handler to processor
+        if hasattr(organizer, 'processor'):
+            organizer.processor.shutdown_handler = shutdown_handler
         
         if args.analyze_only:
             # Just show analysis
