@@ -3,6 +3,43 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.8] - 2025-08-27
+
+### Fixed
+- **CRITICAL HOTFIX**: Fixed fatal `AttributeError: 'EnhancedROMOrganizer' object has no attribute 'logger_analysis'` crash
+- Fixed incorrect logger references in debug logging code added in v0.9.7
+- Interactive mode debug logging now uses correct `self.analyzer.logger` instead of non-existent `self.logger_analysis`
+- Analyze-only mode debug logging now uses correct `analyzer.logger` instead of non-existent `organizer.logger_analysis`
+
+### Technical Details
+- Fixed 12 incorrect logger references in interactive mode path (lines 3239-3292)
+- Fixed 12 incorrect logger references in analyze-only mode path (lines 3708-3761)
+- All debug logging now uses the proper analyzer logger from `self.comprehensive_logger.get_logger('analysis')`
+- Maintains backward compatibility while preventing startup crash
+
+**BREAKING CHANGE RESOLVED**: Debug logging functionality now works without AttributeError crashes.
+
+## [0.9.7] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Added enhanced debug logging to BOTH code paths (interactive and analyze-only modes)
+- **CRITICAL**: Fixed unknown files count showing 0 in interactive mode - debug output now works in all modes
+- **CRITICAL**: Fixed completely misleading "Non-ROM files skipped" label - these are actually ROM files in excluded/unknown platforms
+
+### Enhanced  
+- **Interactive Mode Debug**: Enhanced debug logging now works in interactive mode with --debug-analysis flag
+- **Label Clarity**: Changed misleading "Non-ROM files skipped" to "Files in excluded/unknown platforms" with explanation
+- **Path Construction Debug**: Comprehensive logging of path construction, existence checks, and file counting for unknown directories
+- **Complete Transparency**: Debug mode now shows exactly why unknown files count as 0 and what extensions are found
+
+### Technical Details
+- Copied comprehensive debug logging from analyze-only path to regular organize_roms path (lines 3228-3297)
+- Enhanced debug output works regardless of whether --analyze-only flag is used
+- Fixed label confusion: 1,376 "non-ROM files" are actually ROM files (.zip) in excluded (659) + unknown (717) platforms
+- Debug mode provides step-by-step path validation and file counting for unknown directories
+
+**BREAKING CHANGE RESOLVED**: Enhanced debugging now works in interactive mode, not just analyze-only mode.
+
 ## [0.9.6] - 2025-08-27
 
 ### Fixed

@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.6"
+__version__ = "0.9.8"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1241,7 +1241,7 @@ class ModernTerminalDisplay:
         print("File Discovery:")
         print(f"  ✓ Total files discovered:      {self.stats['total_files_discovered']:,}")
         print(f"  ✓ ROM files (supported ext):   {self.stats['rom_files']:,}  ({self.stats['rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
-        print(f"  ✓ Non-ROM files skipped:        {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
+        print(f"  ✓ Files in excluded/unknown:    {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%) - These ARE ROM files, just not in supported platforms")
         
         # Show non-ROM file type breakdown if available
         if non_rom_extensions and self.stats['non_rom_files'] > 0:
@@ -1278,7 +1278,7 @@ class ModernTerminalDisplay:
         print("✗ Not Processing:")
         print(f"  • Excluded platform files:      {self.stats['files_excluded']:,} (will remain in source)")
         print(f"  • Unknown platform files:         {self.stats['files_unknown']:,} (will remain in source)")
-        print(f"  • Non-ROM files:               {self.stats['non_rom_files']:,} (will remain in source)")
+        print(f"  • Files in excluded/unknown:   {self.stats['non_rom_files']:,} (will remain in source - these are ROM files in unsupported platforms)")
         print()
         
     def start_processing_phase(self):
@@ -3225,11 +3225,76 @@ class EnhancedROMOrganizer:
             if excluded:
                 excluded_files = sum(file_count for reason, file_count in excluded.values())
             
+            # Calculate unknown files count with comprehensive debugging (same as analyze-only path)
             unknown_files = 0
             if unknown:
+                debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
+                
+                if debug_mode:
+                    print(f"\nDEBUG: UNKNOWN FILES COUNT ANALYSIS (Interactive Mode)")
+                    print(f"DEBUG: Found {len(unknown)} unknown folders to analyze...")
+                    print(f"DEBUG: Source directory: {self.source_dir}")
+                    print(f"DEBUG: ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
+                    
+                self.analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING (Interactive Mode):")
+                self.analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
+                self.analyzer.logger.info(f"  Source directory: {self.source_dir}")
+                
                 for unknown_folder in unknown:
                     unknown_dir_path = self.source_dir / unknown_folder
-                    unknown_files += count_rom_files_in_directory(unknown_dir_path)
+                    
+                    # Log path construction details
+                    self.analyzer.logger.info(f"  Checking folder: '{unknown_folder}'")
+                    self.analyzer.logger.info(f"    Constructed path: {unknown_dir_path}")
+                    self.analyzer.logger.info(f"    Path exists: {unknown_dir_path.exists()}")
+                    
+                    if unknown_dir_path.exists():
+                        # Count files with detailed logging
+                        all_files = []
+                        rom_files = []
+                        extensions_found = set()
+                        
+                        try:
+                            for root, dirs, files in os.walk(unknown_dir_path):
+                                for file in files:
+                                    all_files.append(file)
+                                    extension = Path(file).suffix.lower()
+                                    extensions_found.add(extension)
+                                    if extension in ROM_EXTENSIONS:
+                                        rom_files.append(file)
+                        except Exception as e:
+                            self.analyzer.logger.error(f"    Error walking directory: {e}")
+                            continue
+                        
+                        folder_count = len(rom_files)
+                        unknown_files += folder_count
+                        
+                        # Log detailed results
+                        self.analyzer.logger.info(f"    Total files: {len(all_files)}")
+                        self.analyzer.logger.info(f"    ROM files: {folder_count}")
+                        self.analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
+                        
+                        if debug_mode:
+                            print(f"DEBUG: '{unknown_folder}'")
+                            print(f"       Path: {unknown_dir_path}")
+                            print(f"       Exists: {unknown_dir_path.exists()}")
+                            print(f"       Total files: {len(all_files)}")
+                            print(f"       ROM files: {folder_count}")
+                            print(f"       Extensions: {sorted(extensions_found)}")
+                            if folder_count != len(all_files):
+                                non_rom_extensions = extensions_found - ROM_EXTENSIONS
+                                print(f"       Non-ROM extensions: {sorted(non_rom_extensions)}")
+                    else:
+                        self.analyzer.logger.warning(f"    WARNING: Path does not exist!")
+                        if debug_mode:
+                            print(f"DEBUG: '{unknown_folder}' -> PATH DOES NOT EXIST!")
+                
+                self.analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED (Interactive): {unknown_files}")
+                if debug_mode:
+                    print(f"DEBUG: TOTAL unknown files counted: {unknown_files}")
+                    if unknown_files == 0 and len(unknown) > 0:
+                        print(f"DEBUG: WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
+                        print(f"DEBUG: This suggests either path issues or non-ROM file extensions")
             
             progress_display.stats.update({
                 'supported_platforms': len(platforms),
@@ -3640,17 +3705,17 @@ Features:
                     print(f"DEBUG: Source directory: {organizer.source_dir}")
                     print(f"DEBUG: ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
                     
-                organizer.logger_analysis.info(f"UNKNOWN FILES COUNT DEBUGGING:")
-                organizer.logger_analysis.info(f"  Unknown folders to check: {len(unknown)}")
-                organizer.logger_analysis.info(f"  Source directory: {organizer.source_dir}")
+                analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING:")
+                analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
+                analyzer.logger.info(f"  Source directory: {organizer.source_dir}")
                 
                 for unknown_folder in unknown:
                     unknown_dir_path = organizer.source_dir / unknown_folder
                     
                     # Log path construction details
-                    organizer.logger_analysis.info(f"  Checking folder: '{unknown_folder}'")
-                    organizer.logger_analysis.info(f"    Constructed path: {unknown_dir_path}")
-                    organizer.logger_analysis.info(f"    Path exists: {unknown_dir_path.exists()}")
+                    analyzer.logger.info(f"  Checking folder: '{unknown_folder}'")
+                    analyzer.logger.info(f"    Constructed path: {unknown_dir_path}")
+                    analyzer.logger.info(f"    Path exists: {unknown_dir_path.exists()}")
                     
                     if unknown_dir_path.exists():
                         # Count files with detailed logging
@@ -3667,16 +3732,16 @@ Features:
                                     if extension in ROM_EXTENSIONS:
                                         rom_files.append(file)
                         except Exception as e:
-                            organizer.logger_analysis.error(f"    Error walking directory: {e}")
+                            analyzer.logger.error(f"    Error walking directory: {e}")
                             continue
                         
                         folder_count = len(rom_files)
                         unknown_files_count += folder_count
                         
                         # Log detailed results
-                        organizer.logger_analysis.info(f"    Total files: {len(all_files)}")
-                        organizer.logger_analysis.info(f"    ROM files: {folder_count}")
-                        organizer.logger_analysis.info(f"    Extensions found: {sorted(extensions_found)}")
+                        analyzer.logger.info(f"    Total files: {len(all_files)}")
+                        analyzer.logger.info(f"    ROM files: {folder_count}")
+                        analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
                         
                         if debug_mode:
                             print(f"DEBUG: '{unknown_folder}'")
@@ -3689,11 +3754,11 @@ Features:
                                 non_rom_extensions = extensions_found - ROM_EXTENSIONS
                                 print(f"       Non-ROM extensions: {sorted(non_rom_extensions)}")
                     else:
-                        organizer.logger_analysis.warning(f"    WARNING: Path does not exist!")
+                        analyzer.logger.warning(f"    WARNING: Path does not exist!")
                         if debug_mode:
                             print(f"DEBUG: '{unknown_folder}' -> PATH DOES NOT EXIST!")
                 
-                organizer.logger_analysis.info(f"TOTAL UNKNOWN FILES COUNTED: {unknown_files_count}")
+                analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED: {unknown_files_count}")
                 if debug_mode:
                     print(f"DEBUG: TOTAL unknown files counted: {unknown_files_count}")
                     if unknown_files_count == 0 and len(unknown) > 0:
