@@ -852,11 +852,9 @@ def display_unified_progress(emoji: str, label: str, current: int, total: int,
     print(f"\r{progress_display}", end='', flush=True)
 
 def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_retries=3):
-    """Atomic file copy with verification and retry logic, returns (success, error_msg)"""
-    import tempfile
+    """Direct file copy with verification and retry logic, returns (success, error_msg)"""
     import time
     import platform
-    import gc
     
     source_path = Path(source_path)
     target_file_path = Path(target_file_path)
@@ -864,9 +862,9 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
     
     # Windows-specific retry delays (more conservative)
     if is_windows:
-        retry_delays = [0.5, 1.5, 3.0]  # Progressive delays for Windows
+        retry_delays = [0.1, 0.3, 0.6]  # Shorter delays since we avoid temp files
     else:
-        retry_delays = [0.1, 0.2, 0.4]  # Faster for Unix-like systems
+        retry_delays = [0.05, 0.1, 0.2]  # Faster for Unix-like systems
     
     # WSL2 detection: if either source or target is on Windows mount, use simple copy
     if is_wsl2_mount(source_path) or is_wsl2_mount(target_file_path):
@@ -890,38 +888,35 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
             operations_logger.error(error_msg)
         return False, error_msg
     
-    # Standard atomic copy with platform-specific optimizations
+    # Direct copy without temp files to avoid antivirus interference
     last_error = None
+    source_size = None
+    
+    try:
+        source_size = source_path.stat().st_size
+    except Exception as e:
+        return False, f"Cannot read source file: {e}"
+    
     for attempt in range(max_retries):
-        temp_path = None
         try:
             # Create target directory if needed
             target_file_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # Use temporary file for atomic copy
-            with tempfile.NamedTemporaryFile(
-                dir=target_file_path.parent,
-                delete=False,
-                suffix='.tmp'
-            ) as temp_file:
-                temp_path = Path(temp_file.name)
+            # Small delay on Windows to let antivirus settle
+            if is_windows and attempt > 0:
+                time.sleep(0.05 * (2 ** attempt))
             
-            # Copy to temporary file
-            shutil.copy2(source_path, temp_path)
+            # Direct copy without temp files (avoids antivirus triggers)
+            shutil.copy2(source_path, target_file_path)
             
-            # Windows-specific optimization: explicit flush and brief delay
-            if is_windows:
-                try:
-                    # Force garbage collection to release file handles
-                    gc.collect()
-                    time.sleep(0.05)  # Brief delay for Windows file system
-                except Exception:
-                    pass  # Don't fail on optimization attempts
-            
-            # Verify the copy was successful (not 0-byte)
-            if temp_path.stat().st_size == 0:
-                temp_path.unlink(missing_ok=True)
-                error_msg = f"0-byte file detected during copy: {source_path}"
+            # Verify the copy was successful
+            if target_file_path.exists() and target_file_path.stat().st_size == source_size:
+                return True, None
+            else:
+                # Clean up failed copy
+                if target_file_path.exists():
+                    target_file_path.unlink(missing_ok=True)
+                error_msg = f"Copy verification failed: {source_path}"
                 if attempt < max_retries - 1:
                     if operations_logger:
                         operations_logger.warning(f"{error_msg} (attempt {attempt + 1})")
@@ -929,23 +924,13 @@ def copy_file_atomic(source_path, target_file_path, operations_logger=None, max_
                     continue
                 else:
                     return False, f"Failed to copy after {max_retries} attempts - {error_msg}"
-            
-            # Atomic rename to final destination with platform-specific handling
-            if is_windows:
-                # Use os.replace for better Windows compatibility
-                import os
-                os.replace(str(temp_path), str(target_file_path))
-            else:
-                temp_path.rename(target_file_path)
-            
-            return True, None
                 
         except Exception as e:
             last_error = str(e)
-            # Clean up temp file on error
-            if temp_path and temp_path.exists():
+            # Clean up any partial file
+            if target_file_path.exists():
                 try:
-                    temp_path.unlink(missing_ok=True)
+                    target_file_path.unlink(missing_ok=True)
                 except Exception:
                     pass  # Don't fail cleanup
             
