@@ -3,6 +3,22 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.9] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Fixed fatal tuple unpacking error causing "can only concatenate list (not 'int') to list" crash
+- Fixed missing `directory_stats` in error return path of `analyze_directory` method
+- Error handling in directory analysis now returns proper 4-tuple instead of 3-tuple
+- Prevents variable misalignment when source directory access fails
+
+### Technical Details
+- Added missing `directory_stats` dictionary to error return at line 2497-2502
+- Error return now provides default stats: `{'total_processed': 0, 'directories_with_roms': 0, 'empty_directories': 0}`
+- Maintains consistency with successful return path that expects 4 values
+- Prevents tuple unpacking ValueError that caused type confusion in downstream code
+
+**PROGRESS UPDATE**: Debug logging now successfully shows 717 unknown files, proving the unknown files counting issue from v0.9.7 is resolved.
+
 ## [0.9.8] - 2025-08-27
 
 ### Fixed

@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.9.8"
+__version__ = "0.9.9"
 VERSION_DATE = "2025-08-27"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -2494,7 +2494,12 @@ class PlatformAnalyzer:
                     top_level_dirs.append(item)
         except (OSError, PermissionError) as e:
             self.logger.error(f"Error accessing source directory: {e}")
-            return platforms, excluded, unknown
+            directory_stats = {
+                'total_processed': 0,
+                'directories_with_roms': 0, 
+                'empty_directories': 0
+            }
+            return platforms, excluded, unknown, directory_stats
         
         # Process each top-level directory and count ROM files recursively within each
         total_dirs = len(top_level_dirs)
