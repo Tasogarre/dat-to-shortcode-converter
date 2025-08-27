@@ -3,6 +3,29 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.6] - 2025-08-27
+
+### Fixed
+- **CRITICAL**: Enhanced unknown files counting with comprehensive debug logging to resolve 0-count issue
+- **CRITICAL**: Added complete file extension analysis during initial directory scan for transparency
+- Fixed potential excluded platforms count display discrepancy 
+- Added extensive debug output for --debug-analysis mode to trace file counting issues
+
+### Enhanced  
+- **File Extension Transparency**: Added comprehensive logging of all file extensions found during analysis
+- **Debug Mode Enhancements**: Extensive debug output shows exact paths, file counts, and extensions for unknown directories
+- **Analysis Phase Logging**: All file extensions now tracked and logged with ROM vs non-ROM classification
+- **Unknown Files Debugging**: Step-by-step path construction and file counting with detailed logging
+
+### Technical Details
+- Enhanced analyze_directory method with Counter() tracking for all file extensions
+- Added comprehensive debug output in analyze-only mode for unknown files counting
+- Unknown files now show detailed path existence checks, file counts, and extension analysis
+- File extension breakdown shows top 20 extensions with counts and ROM/non-ROM classification
+- Debug mode provides complete transparency into why files are/aren't counted
+
+This version provides complete transparency into the file counting process and should resolve the unknown files showing 0 issue.
+
 ## [0.9.5] - 2025-08-27
 
 ### Fixed
