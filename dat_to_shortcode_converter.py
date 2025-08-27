@@ -1128,6 +1128,7 @@ class PerformanceOptimizedROMProcessor:
         total_platforms = len(selected_platforms)
         processed_platforms = 0
         start_time = time.perf_counter()
+        last_update_time = time.perf_counter()  # Track last progress update separately
         
         for platform_shortcode in selected_platforms:
             if platform_shortcode in platforms:
@@ -1149,8 +1150,8 @@ class PerformanceOptimizedROMProcessor:
                     current_time = time.perf_counter()
                     
                     # Show progress for each platform completion or periodically
-                    if processed_folders == total_folders or current_time - start_time > 0.5:
-                        start_time = current_time
+                    if processed_folders == total_folders or current_time - last_update_time > 0.5:
+                        last_update_time = current_time  # Update last update time, not start time
                         extra_info = f"{len(files):,} files found"
                         display_unified_progress(
                             emoji="🔍",
@@ -1172,8 +1173,15 @@ class PerformanceOptimizedROMProcessor:
                 extra_info=extra_info
             )
         
-        # Clear the progress line and show completion
-        print()  # Add newline after progress
+        # Final progress update showing 100% completion
+        display_unified_progress(
+            emoji="🔍",
+            label="Discovering", 
+            current=total_platforms,
+            total=total_platforms,
+            extra_info=f"{len(files):,} files found"
+        )
+        print()  # Clear the progress line
         return files
     
     def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
