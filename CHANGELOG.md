@@ -3,6 +3,28 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.2] - 2025-08-28
+
+### Added
+- **Single Copy Engine Architecture**: Consolidated dual-engine architecture into unified AsyncFileCopyEngine for improved reliability
+- **File Count Validation**: Added comprehensive target file counting with discrepancy detection and logging
+- **Error Categorization**: Enhanced error tracking with detailed categorization (file locking, integrity, permissions, disk space, filesystem)
+- **Error Breakdown Display**: Added comprehensive error analysis in processing summary with category-wise breakdown
+
+### Fixed  
+- **File Count Discrepancy**: Resolved stats reconciliation issues by removing legacy PerformanceOptimizedROMProcessor and using single copy engine
+- **Missing Files Detection**: Added validate_target_files() method to detect and log file count mismatches between expected and actual
+- **Error Visibility**: Enhanced error tracking architecture now captures and categorizes all error types with detailed logging
+
+### Technical Improvements
+- **Unified Architecture**: Moved discover_files_concurrent method from removed PerformanceOptimizedROMProcessor to AsyncFileCopyEngine
+- **Comprehensive Error Logging**: All errors now logged with specific category assignment and detailed troubleshooting information  
+- **Enhanced Summary Display**: Processing summary now includes error breakdown, file flow analysis, and validation results
+- **Thread-Safe Error Tracking**: Error categorization implemented with proper thread synchronization
+
+### Removed
+- **PerformanceOptimizedROMProcessor**: Eliminated redundant copy engine class to prevent stats reconciliation issues
+
 ## [0.12.1] - 2025-08-28
 
 ### Fixed

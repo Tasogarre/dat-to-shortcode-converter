@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.1"
+__version__ = "0.12.2"
 VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -339,6 +339,7 @@ class ProcessingStats:
     files_skipped_duplicate: int = 0
     files_skipped_unknown: int = 0
     errors: int = 0
+    error_details: List[Dict[str, str]] = field(default_factory=list)  # Track specific error details
     processing_time: float = 0.0
     selected_platforms: List[str] = None
     folders_created: Set[str] = field(default_factory=set)  # Track created directories
@@ -1598,433 +1599,6 @@ def count_files_in_directory(target_dir: Path) -> int:
         count += len(list(target_dir.rglob(f"*{ext}")))
     return count
 
-class PerformanceOptimizedROMProcessor:
-    """Simple processor for basic ROM organization functionality"""
-    
-    def __init__(self, source_dir, operations_logger, progress_logger, dry_run=False, max_workers=None):
-        import platform
-        
-        self.source_dir = source_dir
-        self.operations_logger = operations_logger
-        self.progress_logger = progress_logger
-        self.logger_errors = operations_logger  # Fix AttributeError - use operations_logger for errors
-        self.dry_run = dry_run
-        
-        # Platform-aware thread defaults
-        if max_workers is not None:
-            self.max_io_workers = max_workers
-        else:
-            is_windows = platform.system() == 'Windows'
-            if is_windows:
-                self.max_io_workers = 3  # Updated from 2 based on user testing
-            else:
-                self.max_io_workers = 4  # More aggressive for Unix-like systems
-        
-        self.hash_chunk_size = 65536
-        self.progress_update_frequency = 100
-        
-        # Log platform and threading configuration
-        platform_name = platform.system()
-        self.operations_logger.info(f"Platform: {platform_name}, Thread workers: {self.max_io_workers}")
-    
-    def discover_files_concurrent(self, platforms, selected_platforms):
-        """Discover ROM files in selected platform directories with comprehensive counting"""
-        import time
-        
-        files = []
-        total_files_discovered = 0  # Track ALL files for complete statistics
-        non_rom_extensions = Counter()  # Track non-ROM file extensions for transparency
-        total_platforms = len(selected_platforms)
-        processed_platforms = 0
-        start_time = time.perf_counter()
-        last_update_time = time.perf_counter()  # Track last progress update separately
-        
-        for platform_shortcode in selected_platforms:
-            if platform_shortcode in platforms:
-                platform_info = platforms[platform_shortcode]
-                
-                # Track folders within this platform
-                total_folders = len(platform_info.source_folders)
-                processed_folders = 0
-                
-                for source_folder in platform_info.source_folders:
-                    folder_path = self.source_dir / source_folder
-                    if folder_path.exists():
-                        # Count ALL files for complete statistics
-                        for file_path in folder_path.rglob("*"):
-                            if file_path.is_file():
-                                total_files_discovered += 1
-                                extension = file_path.suffix.lower()
-                                # Only add ROM files to processing list
-                                if extension in ROM_EXTENSIONS:
-                                    files.append(file_path)
-                                else:
-                                    # Track non-ROM file extensions for transparency
-                                    non_rom_extensions[extension] += 1
-                    
-                    processed_folders += 1
-                    
-                    # Update progress every folder for small collections or every few folders for large ones
-                    current_time = time.perf_counter()
-                    
-                    # Show progress for each platform completion or periodically
-                    if processed_folders == total_folders or current_time - last_update_time > 0.5:
-                        last_update_time = current_time  # Update last update time, not start time
-                        extra_info = f"{len(files):,} files found"
-                        display_unified_progress(
-                            emoji="🔍",
-                            label="Discovering", 
-                            current=processed_platforms,
-                            total=total_platforms,
-                            extra_info=extra_info
-                        )
-            
-            processed_platforms += 1
-            
-            # Final update for this platform
-            extra_info = f"{len(files):,} files found"
-            display_unified_progress(
-                emoji="🔍",
-                label="Discovering", 
-                current=processed_platforms,
-                total=total_platforms,
-                extra_info=extra_info
-            )
-        
-        # Final progress update showing comprehensive statistics
-        non_rom_files = total_files_discovered - len(files)
-        display_unified_progress(
-            emoji="🔍",
-            label="Discovering", 
-            current=total_platforms,
-            total=total_platforms,
-            extra_info=f"{len(files):,} ROM files + {non_rom_files:,} other files = {total_files_discovered:,} total"
-        )
-        print()  # Clear the progress line
-        
-        # Log comprehensive file discovery statistics
-        self.operations_logger.info(f"COMPREHENSIVE FILE DISCOVERY STATISTICS:")
-        self.operations_logger.info(f"  Total files discovered (recursive): {total_files_discovered:,}")
-        self.operations_logger.info(f"  ROM files (will process): {len(files):,}")
-        self.operations_logger.info(f"  Non-ROM files (skipped): {non_rom_files:,}")
-        self.operations_logger.info(f"  ROM file percentage: {(len(files) / max(total_files_discovered, 1)) * 100:.1f}%")
-        
-        # Log non-ROM file type breakdown for transparency
-        if non_rom_extensions:
-            self.operations_logger.info(f"NON-ROM FILE TYPE BREAKDOWN:")
-            # Sort by count (descending) and show top 10
-            top_extensions = non_rom_extensions.most_common(10)
-            for extension, count in top_extensions:
-                display_ext = extension if extension else "[no extension]"
-                self.operations_logger.info(f"  {display_ext}: {count:,} files")
-            if len(non_rom_extensions) > 10:
-                remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
-                self.operations_logger.info(f"  [Other extensions]: {remaining:,} files")
-        
-        # Store comprehensive statistics for later use
-        self.total_files_discovered = total_files_discovered
-        self.non_rom_extensions = non_rom_extensions
-        return files
-    
-    def process_files_concurrent(self, all_files, target_dir, format_handler, platforms_info=None, regional_engine=None):
-        """Process files with folder-level threading to eliminate directory contention"""
-        import time
-        from pathlib import Path
-        import shutil
-        import tempfile
-        from threading import Lock
-        from collections import defaultdict
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
-        stats = ProcessingStats()
-        stats.files_found = len(all_files)
-        
-        if not all_files:
-            return stats
-            
-        # Progress tracking variables (thread-safe)
-        progress_lock = Lock()
-        files_processed = 0
-        files_copied = 0
-        files_replaced = 0
-        files_skipped = 0
-        files_renamed = 0  # Track renamed duplicates globally
-        errors = 0
-        start_time = time.perf_counter()
-        current_file_name = ""
-        
-        # Group files by source folder to prevent directory contention
-        files_by_folder = defaultdict(list)
-        for file_path in all_files:
-            source_folder = Path(file_path).parent
-            files_by_folder[source_folder].append(file_path)
-            
-        self.operations_logger.info(f"Folder-level threading: Processing {len(files_by_folder)} folders with {len(all_files)} total files")
-        
-        def update_progress(file_name=""):
-            """Thread-safe progress display using unified format"""
-            nonlocal current_file_name
-            if file_name:
-                current_file_name = file_name
-                
-            current_time = time.perf_counter()
-            elapsed_time = current_time - start_time
-            
-            if elapsed_time > 0:
-                files_per_sec = files_processed / elapsed_time
-                
-                if files_processed > 0:
-                    estimated_total_time = (len(all_files) * elapsed_time) / files_processed
-                    eta_seconds = max(0, estimated_total_time - elapsed_time)
-                else:
-                    eta_seconds = 0
-                    files_per_sec = 0
-                
-                # Use unified progress display
-                display_unified_progress(
-                    emoji="📦",
-                    label="Processing", 
-                    current=files_processed,
-                    total=len(all_files),
-                    rate=files_per_sec,
-                    eta_seconds=eta_seconds
-                )
-        
-        def process_folder_files(folder_path, folder_files):
-            """Process all files from a single folder sequentially (eliminates directory contention)"""
-            nonlocal files_processed, files_copied, files_replaced, files_skipped, files_renamed, errors
-            folder_copied = 0
-            folder_replaced = 0
-            folder_skipped = 0 
-            folder_errors = 0
-            folder_renamed = 0  # New counter for renamed duplicates
-            
-            # Track target paths being created to prevent collisions
-            target_paths_in_batch = set()
-            
-            self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
-            
-            for file_path in folder_files:
-                try:
-                    source_path = Path(file_path)
-                    
-                    # Find platform for this file
-                    platform_shortcode = None
-                    source_folder_name = None
-                    
-                    if platforms_info:
-                        # Find which platform this file belongs to
-                        for platform_code, platform_info in platforms_info.items():
-                            for source_folder in platform_info.source_folders:
-                                folder_path_check = Path(self.source_dir) / source_folder
-                                try:
-                                    source_path.relative_to(folder_path_check)
-                                    platform_shortcode = platform_code
-                                    source_folder_name = source_folder
-                                    break
-                                except ValueError:
-                                    continue
-                            if platform_shortcode:
-                                break
-                    
-                    if not platform_shortcode:
-                        platform_shortcode = source_path.parent.name.lower()
-                        source_folder_name = source_path.parent.name
-                    
-                    # Apply regional preferences
-                    if regional_engine:
-                        platform_shortcode = regional_engine.get_target_platform(source_folder_name or "", platform_shortcode)
-                    
-                    # Get base target directory (with format handling)
-                    if format_handler and source_folder_name:
-                        target_platform_dir = format_handler.get_target_path(platform_shortcode, source_folder_name, target_dir)
-                    else:
-                        target_platform_dir = target_dir / platform_shortcode
-                    
-                    # Get unique target path (prevents filename collisions)
-                    target_file_path, rename_reason = get_unique_target_path(
-                        source_path,
-                        target_dir,
-                        platform_shortcode,
-                        source_folder_name,
-                        target_paths_in_batch,
-                        self.operations_logger
-                    )
-                    
-                    # Track this target path to prevent future collisions
-                    target_paths_in_batch.add(str(target_file_path))
-                    
-                    # Handle rename reasons from unique path generation
-                    if rename_reason == "skip_identical":
-                        folder_skipped += 1
-                        self.operations_logger.debug(f"Skipping truly identical file: {source_path.name}")
-                        continue
-                    elif rename_reason and rename_reason.startswith("renamed_"):
-                        folder_renamed += 1
-                        # Log the rename decision
-                        if "hint_" in rename_reason:
-                            hint = rename_reason.split("hint_")[1]
-                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (hint: {hint})")
-                        elif "number_" in rename_reason:
-                            number = rename_reason.split("number_")[1]
-                            self.operations_logger.info(f"Prevented overwrite: {source_path.name} -> {target_file_path.name} (#{number})")
-                    
-                    # Update progress display
-                    update_progress(f"{platform_shortcode}/{target_file_path.name}")
-                    
-                    # Smart file copy with SHA1 verification
-                    if not self.dry_run:
-                        # Check if we need to copy using SHA1 comparison
-                        should_copy, reason, details = should_copy_file(source_path, target_file_path, self.operations_logger)
-                        
-                        if should_copy:
-                            # Log the reason for copying
-                            if reason == "new_file":
-                                self.operations_logger.debug(f"Copying new file: {target_file_path.name}")
-                            elif reason in ["size_mismatch", "hash_mismatch"]:
-                                self.operations_logger.info(f"Replacing different file: {target_file_path.name} (reason: {reason})")
-                            else:
-                                self.operations_logger.debug(f"Copying file: {target_file_path.name} (reason: {reason})")
-                            
-                            # Check for shutdown request
-                            if shutdown_handler and shutdown_handler.check_shutdown():
-                                self.operations_logger.info("Shutdown requested, stopping processing")
-                                return
-                            
-                            # Use improved atomic copy method with proper timing
-                            try:
-                                success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
-                                
-                                # Handle special error messages
-                                if error_msg and "identical" in error_msg:
-                                    folder_skipped += 1
-                                    success = False  # Don't count as copied
-                                elif error_msg and "replaced" in error_msg:
-                                    folder_replaced += 1
-                                    success = True
-                                
-                                if success:
-                                    # Track folder creation
-                                    folder_dir_str = str(target_file_path.parent)
-                                    if folder_dir_str not in stats.folders_created:
-                                        stats.folders_created.add(folder_dir_str)
-                                    
-                                    # Count based on rename status - FIXED: Don't double-count renamed files
-                                    if rename_reason and rename_reason.startswith("renamed_"):
-                                        # This is a renamed duplicate, already counted in folder_renamed - don't double-count
-                                        pass  # Renamed files already counted at line 1313, don't count again as copied
-                                    elif reason == "new_file":
-                                        folder_copied += 1
-                                    else:
-                                        folder_replaced += 1
-                                    self.operations_logger.debug(f"Successfully copied: {source_path.name}")
-                                    # Log file size for verification
-                                    try:
-                                        target_size = target_file_path.stat().st_size
-                                        self.operations_logger.debug(f"Copy verified: {target_size:,} bytes written")
-                                    except Exception:
-                                        pass
-                                else:
-                                    folder_errors += 1
-                                    self.logger_errors.error(f"Failed to copy {source_path.name}: {error_msg}")
-                                    # Log detailed failure for debugging
-                                    self.logger_errors.debug(f"Copy failure: {source_path} -> {target_file_path}")
-                            except Exception as copy_exception:
-                                # Critical: Catch ALL copy operation exceptions
-                                folder_errors += 1
-                                self.logger_errors.error(f"CRITICAL: Copy operation exception for {source_path.name}: {str(copy_exception)}")
-                                self.logger_errors.debug(f"Copy exception details: {source_path} -> {target_file_path}")
-                        else:
-                            # File is identical, skip it
-                            folder_skipped += 1
-                            if reason == "identical_hash":
-                                hash_preview = details.get("hash", "unknown")[:8]
-                                self.operations_logger.debug(f"Skipped identical file: {source_path.name} (SHA1: {hash_preview}...)")
-                            else:
-                                self.operations_logger.debug(f"Skipped file: {source_path.name} (reason: {reason})")
-                    else:
-                        # Dry run mode
-                        if rename_reason and rename_reason.startswith("renamed_"):
-                            folder_renamed += 1
-                            self.operations_logger.debug(f"[DRY RUN] Would rename: {source_path} -> {target_file_path}")
-                        else:
-                            folder_copied += 1
-                            self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
-                        
-                except Exception as e:
-                    folder_errors += 1
-                    self.logger_errors.error(f"Error processing {file_path}: {str(e)}")
-                
-                finally:
-                    # Update global counters thread-safely
-                    with progress_lock:
-                        files_processed += 1
-                        
-            # Update global stats for this folder
-            with progress_lock:
-                files_copied += folder_copied
-                files_replaced += folder_replaced
-                files_skipped += folder_skipped
-                files_renamed += folder_renamed
-                errors += folder_errors
-                
-            self.operations_logger.info(f"Completed folder {folder_path}: {folder_copied} copied, {folder_replaced} replaced, {folder_renamed} renamed, {folder_skipped} skipped, {folder_errors} errors")
-        
-        # Process folders with one thread per folder (eliminates directory contention)
-        max_workers = min(self.max_io_workers, len(files_by_folder))
-        self.operations_logger.info(f"Using {max_workers} threads for {len(files_by_folder)} folders")
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Register executor with shutdown handler for proper cleanup
-            if shutdown_handler:
-                shutdown_handler.executor = executor
-            
-            # Submit one folder per thread
-            futures = []
-            for folder_path, folder_files in files_by_folder.items():
-                future = executor.submit(process_folder_files, folder_path, folder_files)
-                futures.append(future)
-            
-            # Wait for all folders to complete
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    with progress_lock:
-                        errors += 1
-                    self.logger_errors.error(f"CRITICAL THREAD ERROR: {str(e)}")
-                    # Log full traceback for debugging
-                    import traceback
-                    self.logger_errors.error(f"Thread error traceback: {traceback.format_exc()}")
-        
-        # Final progress display with newline
-        display_unified_progress(
-            emoji="📦",
-            label="Processing", 
-            current=files_processed,
-            total=len(all_files),
-            rate=files_processed / (time.perf_counter() - start_time) if (time.perf_counter() - start_time) > 0 else 0,
-            eta_seconds=0
-        )
-        print(f"\n✅ Multi-threaded processing complete: {files_processed:,} files processed")
-        print(f"   📋 Results: {files_copied:,} copied, {files_replaced:,} replaced, {files_renamed:,} renamed, {files_skipped:,} skipped, {errors:,} errors")
-        
-        # Update stats (including folders_created from the internal stats object)
-        stats.files_copied = files_copied
-        stats.files_replaced = files_replaced
-        stats.files_renamed_duplicates = files_renamed
-        stats.files_skipped_duplicate = files_skipped
-        stats.errors = errors
-        # Note: stats.folders_created should already be populated within process_folder_files
-        
-        # Log final statistics
-        elapsed_time = time.perf_counter() - start_time
-        self.operations_logger.info(f"Processing completed in {elapsed_time:.2f} seconds")
-        self.operations_logger.info(f"Copy rate: {files_copied / elapsed_time if elapsed_time > 0 else 0:.1f} files/second")
-        self.operations_logger.info(f"Folder-level threading: Processed {len(files_by_folder)} folders with {max_workers} threads")
-        
-        return stats
-
 class AsyncFileCopyEngine:
     """Adaptive file copying engine that automatically optimizes for filesystem type"""
     
@@ -2276,6 +1850,33 @@ class AsyncFileCopyEngine:
         
         stats = ProcessingStats()
         
+        # Thread-safe error tracking
+        error_lock = Lock()
+        
+        def categorize_error(error_message: str) -> str:
+            """Categorize error by type for better reporting"""
+            error_msg_lower = error_message.lower()
+            if "being used by another process" in error_msg_lower or "winerror 32" in error_msg_lower:
+                return "file_locking"
+            elif "crc mismatch" in error_msg_lower or "crc32" in error_msg_lower:
+                return "integrity_check"
+            elif "permission" in error_msg_lower or "access" in error_msg_lower:
+                return "permissions"
+            elif "no space" in error_msg_lower or "disk full" in error_msg_lower:
+                return "disk_space"
+            else:
+                return "unknown"
+        
+        def add_error_detail(file_path: str, error_message: str, error_type: str = None):
+            """Thread-safe error detail recording"""
+            with error_lock:
+                error_category = error_type or categorize_error(error_message)
+                stats.error_details.append({
+                    'file_path': file_path,
+                    'error_message': error_message,
+                    'category': error_category
+                })
+        
         # Flatten files from folder structure and extract paths
         all_files = []
         for folder_files in files_by_folder.values():
@@ -2375,13 +1976,15 @@ class AsyncFileCopyEngine:
                     # Copy file
                     if not self.dry_run:
                         if not target_file_path.exists():
-                            success = self._copy_with_retry(source_path, target_file_path)
+                            success, copy_info = self._copy_with_retry(source_path, target_file_path)
                             if success:
                                 folder_copied += 1
                                 self.operations_logger.debug(f"Successfully copied: {source_path} -> {target_file_path}")
                             else:
                                 folder_errors += 1
-                                self.errors_logger.error(f"Failed to copy: {source_path}")
+                                error_msg = f"Copy failed after retries: {copy_info}"
+                                self.errors_logger.error(f"Failed to copy: {source_path.name} - {copy_info}")
+                                add_error_detail(str(source_path), error_msg)
                         else:
                             folder_skipped += 1
                             self.operations_logger.debug(f"File already exists, skipping: {target_file_path}")
@@ -2392,7 +1995,9 @@ class AsyncFileCopyEngine:
                         
                 except Exception as e:
                     folder_errors += 1
-                    self.errors_logger.error(f"Error processing {source_path}: {str(e)}")
+                    error_msg = f"Exception processing file: {str(e)}"
+                    self.errors_logger.error(f"Error processing {source_path}: {error_msg}")
+                    add_error_detail(str(source_path), error_msg)
                 
                 finally:
                     # Update global counters thread-safely
@@ -2423,7 +2028,9 @@ class AsyncFileCopyEngine:
                 except Exception as e:
                     with progress_lock:
                         errors += 1
-                    self.errors_logger.error(f"Thread error processing {folder_path}: {str(e)}")
+                    error_msg = f"Thread exception processing folder {folder_path}: {str(e)}"
+                    self.errors_logger.error(error_msg)
+                    add_error_detail(str(folder_path), error_msg, "thread_exception")
         
         # Final progress update
         with progress_lock:
@@ -2435,7 +2042,7 @@ class AsyncFileCopyEngine:
         print()  # Add newline after progress
         return stats
     
-    def _copy_with_retry(self, source_path: Path, target_path: Path, max_retries: int = 3) -> bool:
+    def _copy_with_retry(self, source_path: Path, target_path: Path, max_retries: int = 3) -> tuple[bool, str]:
         """Copy file with retry logic avoiding temp files to prevent antivirus interference"""
         
         # Ensure target directory exists
@@ -2446,7 +2053,7 @@ class AsyncFileCopyEngine:
             success, info = copy_file_with_verification(source_path, target_path, self.operations_logger)
             
             if success:
-                return True
+                return True, info
                 
             # Log retry attempts as warnings, not errors
             if attempt < max_retries - 1:
@@ -2455,10 +2062,160 @@ class AsyncFileCopyEngine:
                 time.sleep(delay)
             else:
                 # Only log final failure as error after all retries exhausted
-                self.errors_logger.error(f"FINAL FAILURE after {max_retries} attempts: {source_path.name} - {info}")
-                return False
+                final_error = f"FINAL FAILURE after {max_retries} attempts: {source_path.name} - {info}"
+                self.errors_logger.error(final_error)
+                return False, info
                     
-        return False
+        return False, "Unknown error"
+    
+    def discover_files_concurrent(self, platforms, selected_platforms, source_dir):
+        """Discover ROM files in selected platform directories with comprehensive counting"""
+        import time
+        
+        files = []
+        total_files_discovered = 0  # Track ALL files for complete statistics
+        non_rom_extensions = Counter()  # Track non-ROM file extensions for transparency
+        total_platforms = len(selected_platforms)
+        processed_platforms = 0
+        start_time = time.perf_counter()
+        last_update_time = time.perf_counter()  # Track last progress update separately
+        
+        for platform_shortcode in selected_platforms:
+            if platform_shortcode in platforms:
+                platform_info = platforms[platform_shortcode]
+                
+                # Track folders within this platform
+                total_folders = len(platform_info.source_folders)
+                processed_folders = 0
+                
+                for source_folder in platform_info.source_folders:
+                    folder_path = source_dir / source_folder
+                    if folder_path.exists():
+                        # Count ALL files for complete statistics
+                        for file_path in folder_path.rglob("*"):
+                            if file_path.is_file():
+                                total_files_discovered += 1
+                                extension = file_path.suffix.lower()
+                                # Only add ROM files to processing list
+                                if extension in ROM_EXTENSIONS:
+                                    files.append(file_path)
+                                else:
+                                    # Track non-ROM file extensions for transparency
+                                    non_rom_extensions[extension] += 1
+                    
+                    processed_folders += 1
+                    
+                    # Update progress every folder for small collections or every few folders for large ones
+                    current_time = time.perf_counter()
+                    
+                    # Show progress for each platform completion or periodically
+                    if processed_folders == total_folders or current_time - last_update_time > 0.5:
+                        last_update_time = current_time  # Update last update time, not start time
+                        extra_info = f"{len(files):,} files found"
+                        display_unified_progress(
+                            emoji="🔍",
+                            label="Discovering", 
+                            current=processed_platforms,
+                            total=total_platforms,
+                            extra_info=extra_info
+                        )
+            
+            processed_platforms += 1
+            
+            # Final update for this platform
+            extra_info = f"{len(files):,} files found"
+            display_unified_progress(
+                emoji="🔍",
+                label="Discovering", 
+                current=processed_platforms,
+                total=total_platforms,
+                extra_info=extra_info
+            )
+        
+        # Final progress update showing comprehensive statistics
+        non_rom_files = total_files_discovered - len(files)
+        display_unified_progress(
+            emoji="🔍",
+            label="Discovering", 
+            current=total_platforms,
+            total=total_platforms,
+            extra_info=f"{len(files):,} ROM files + {non_rom_files:,} other files = {total_files_discovered:,} total"
+        )
+        print()  # Clear the progress line
+        
+        # Log comprehensive file discovery statistics
+        self.operations_logger.info(f"COMPREHENSIVE FILE DISCOVERY STATISTICS:")
+        self.operations_logger.info(f"  Total files discovered (recursive): {total_files_discovered:,}")
+        self.operations_logger.info(f"  ROM files (will process): {len(files):,}")
+        self.operations_logger.info(f"  Non-ROM files (skipped): {non_rom_files:,}")
+        self.operations_logger.info(f"  ROM file percentage: {(len(files) / max(total_files_discovered, 1)) * 100:.1f}%")
+        
+        # Log non-ROM file type breakdown for transparency
+        if non_rom_extensions:
+            self.operations_logger.info(f"NON-ROM FILE TYPE BREAKDOWN:")
+            # Sort by count (descending) and show top 10
+            top_extensions = non_rom_extensions.most_common(10)
+            for extension, count in top_extensions:
+                display_ext = extension if extension else "[no extension]"
+                self.operations_logger.info(f"  {display_ext}: {count:,} files")
+            if len(non_rom_extensions) > 10:
+                remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
+                self.operations_logger.info(f"  [Other extensions]: {remaining:,} files")
+        
+        # Store comprehensive statistics for later use
+        self.total_files_discovered = total_files_discovered
+        self.non_rom_extensions = non_rom_extensions
+        return files
+    
+    def validate_target_files(self, target_dir: Path, expected_count: int) -> tuple[int, list]:
+        """
+        Count actual ROM files in target directory and return validation results
+        
+        Args:
+            target_dir: Path to target directory for validation
+            expected_count: Expected number of files based on processing stats
+            
+        Returns:
+            Tuple of (actual_count, discrepancy_details) where discrepancy_details
+            is a list of strings describing any mismatches found
+        """
+        if not target_dir.exists():
+            return 0, [f"Target directory does not exist: {target_dir}"]
+        
+        actual_files = []
+        discrepancy_details = []
+        
+        try:
+            # Count actual ROM files in target directory
+            for file_path in target_dir.rglob("*"):
+                if file_path.is_file() and file_path.suffix.lower() in ROM_EXTENSIONS:
+                    actual_files.append(file_path)
+            
+            actual_count = len(actual_files)
+            
+            # Check for count mismatch
+            if actual_count != expected_count:
+                difference = expected_count - actual_count
+                if difference > 0:
+                    discrepancy_details.append(f"Missing {difference} files: expected {expected_count}, found {actual_count}")
+                else:
+                    discrepancy_details.append(f"Extra {-difference} files: expected {expected_count}, found {actual_count}")
+            
+            # Log validation results
+            if discrepancy_details:
+                self.operations_logger.warning(f"File count validation FAILED: {'; '.join(discrepancy_details)}")
+                for detail in discrepancy_details:
+                    self.logger_errors.error(f"VALIDATION: {detail}")
+            else:
+                self.operations_logger.info(f"File count validation PASSED: {actual_count} files confirmed in target")
+            
+            return actual_count, discrepancy_details
+            
+        except Exception as e:
+            error_detail = f"Validation error: {str(e)}"
+            discrepancy_details.append(error_detail)
+            self.logger_errors.error(f"CRITICAL: Target file validation failed: {str(e)}")
+            return 0, discrepancy_details
 
 class PlatformAnalyzer:
     """Analyzes directories and identifies platforms"""
@@ -3143,14 +2900,6 @@ class EnhancedROMOrganizer:
             dry_run
         )
         
-        # Keep legacy processor for file discovery (will be migrated in future)
-        self.performance_processor = PerformanceOptimizedROMProcessor(
-            source_dir,
-            self.comprehensive_logger.get_logger('operations'),
-            self.comprehensive_logger.get_logger('progress'),
-            dry_run,
-            max_workers=getattr(self, 'max_workers', None)  # Use max_workers if provided
-        )
         
         # Statistics tracking
         self.stats = ProcessingStats()
@@ -3502,12 +3251,12 @@ class EnhancedROMOrganizer:
         # Log performance configuration
         cpu_count = os.cpu_count() or 1
         self.logger_performance.info(f"System CPU cores: {cpu_count}")
-        self.logger_performance.info(f"I/O worker threads: {self.performance_processor.max_io_workers}")
-        self.logger_performance.info(f"Hash chunk size: {self.performance_processor.hash_chunk_size:,} bytes")
+        self.logger_performance.info(f"I/O worker threads: {self.async_copy_engine.max_workers}")
+        self.logger_performance.info(f"Hash chunk size: 8MB (default)")
         
         # Phase 1: Concurrent file discovery
         discovery_start = datetime.now()
-        all_files = self.performance_processor.discover_files_concurrent(platforms, selected_platforms)
+        all_files = self.async_copy_engine.discover_files_concurrent(platforms, selected_platforms, self.source_dir)
         discovery_time = (datetime.now() - discovery_start).total_seconds()
         
         # Log discovery completion (no console output)
@@ -3565,6 +3314,21 @@ class EnhancedROMOrganizer:
         self.stats.files_renamed_duplicates = processing_stats.files_renamed_duplicates
         self.stats.files_skipped_duplicate = processing_stats.files_skipped_duplicate
         self.stats.errors = processing_stats.errors
+        self.stats.error_details = processing_stats.error_details
+        
+        # Validate target file counts to detect discrepancies
+        if not self.dry_run:
+            expected_files = self.stats.files_copied + self.stats.files_renamed_duplicates
+            actual_count, discrepancies = self.async_copy_engine.validate_target_files(
+                self.target_dir, expected_files
+            )
+            
+            if discrepancies:
+                self.logger.warning(f"File count validation detected {len(discrepancies)} issues")
+                for discrepancy in discrepancies:
+                    self.logger.warning(f"VALIDATION: {discrepancy}")
+            else:
+                self.logger.info(f"File count validation passed: {actual_count} files confirmed")
         
         # Update display stats with processing results
         progress_display.stats.update({
@@ -3607,9 +3371,9 @@ class EnhancedROMOrganizer:
             f"  ✅ Platforms Selected: {len(self.stats.selected_platforms)}",
             "",
             "🔍 FILE DISCOVERY (Comprehensive):",
-            f"  📁 Total Files Discovered: {getattr(self.performance_processor, 'total_files_discovered', 'N/A'):,}",
+            f"  📁 Total Files Discovered: {getattr(self.async_copy_engine, 'total_files_discovered', 'N/A'):,}",
             f"  🎮 ROM Files (Processed): {self.stats.files_found:,}",
-            f"  📄 Non-ROM Files (Skipped): {getattr(self.performance_processor, 'total_files_discovered', self.stats.files_found) - self.stats.files_found:,}" if hasattr(self.performance_processor, 'total_files_discovered') else "  📄 Non-ROM Files (Skipped): N/A",
+            f"  📄 Non-ROM Files (Skipped): {getattr(self.async_copy_engine, 'total_files_discovered', self.stats.files_found) - self.stats.files_found:,}" if hasattr(self.async_copy_engine, 'total_files_discovered') else "  📄 Non-ROM Files (Skipped): N/A",
             "",
             "✨ PROCESSING RESULTS:",
             f"  📥 Files Copied (New): {self.stats.files_copied:,}",
@@ -3620,15 +3384,48 @@ class EnhancedROMOrganizer:
             f"  🎯 Total Unique Files: {self.stats.total_unique_files:,}",
             f"  📂 Folders Created: {len(self.stats.folders_created) if hasattr(self.stats, 'folders_created') else 'N/A'}",
             f"  ❌ Errors: {self.stats.errors:,}",
+        ]
+        
+        # Add error categorization breakdown if errors occurred
+        if self.stats.errors > 0 and self.stats.error_details:
+            from collections import Counter
+            error_categories = Counter(error['category'] for error in self.stats.error_details)
+            
+            summary_lines.extend([
+                "",
+                "🚨 ERROR BREAKDOWN BY CATEGORY:",
+            ])
+            
+            for category, count in error_categories.most_common():
+                category_display = {
+                    'file_locking': '🔒 File Locking Issues',
+                    'integrity_check': '🛡️  Integrity Check Failures', 
+                    'permissions': '👮 Permission Denied',
+                    'disk_space': '💾 Disk Space Issues',
+                    'filesystem': '📁 Filesystem Errors',
+                    'unknown': '❓ Unknown Errors'
+                }.get(category, f'❓ {category.title()} Errors')
+                
+                summary_lines.append(f"  {category_display}: {count:,} files")
+            
+            summary_lines.extend([
+                "",
+                "🔍 ERROR ANALYSIS:",
+                f"  📄 See errors log for detailed error messages and file paths",
+                f"  🔧 Most common: {error_categories.most_common(1)[0][0].replace('_', ' ').title()} ({error_categories.most_common(1)[0][1]} files)",
+            ])
+        
+        # Add file flow breakdown section  
+        summary_lines.extend([
             "",
             "📊 FILE FLOW BREAKDOWN:",
-            f"  📁 Files Found: {self.stats.files_found:,}",
-            f"  ➖ Identical Files: {self.stats.files_skipped_duplicate:,} (skipped)",
-            f"  ➖ Failed Copies: {self.stats.errors:,} (logged as errors)",
-            f"  ✅ Net Files Processed: {self.stats.files_copied + self.stats.files_renamed_duplicates:,} (copied + renamed)",
+            f"  📁 Total Files Found: {self.stats.files_found:,}",
+            f"  ➖ Identical (Skipped): {self.stats.files_skipped_duplicate:,}",
+            f"  ➖ Failed Copies: {self.stats.errors:,}",
+            f"  ✅ Net Processed: {self.stats.files_copied + self.stats.files_renamed_duplicates:,} (copied + renamed)",
             "",
             "🎮 SELECTED PLATFORMS:",
-        ]
+        ])
         
         for platform in sorted(self.stats.selected_platforms):
             summary_lines.append(f"  ✅ {platform}")
@@ -3664,10 +3461,10 @@ class EnhancedROMOrganizer:
             f"  ⚡ [PERF] Performance: logs/performance_{self.comprehensive_logger.timestamp}.log",
             "",
             "🔧 PERFORMANCE OPTIMIZATIONS:",
-            f"  🧵 [THREAD] Concurrent I/O workers: {self.performance_processor.max_io_workers}",
+            f"  🧵 [THREAD] Concurrent I/O workers: {self.async_copy_engine.max_workers}",
             f"  💾 [MEM] Memory-mapped hash calculation for large files (>10MB)",
-            f"  🔄 [CYCLE] Chunked processing with {self.performance_processor.hash_chunk_size // 1024}KB chunks",
-            f"  📊 [STATS] Thread-safe progress tracking every {self.performance_processor.progress_update_frequency} files",
+            f"  🔄 [CYCLE] Chunked processing with 8MB chunks",
+            f"  📊 [STATS] Thread-safe progress tracking with live updates",
             "",
             "=" * 80
         ])
