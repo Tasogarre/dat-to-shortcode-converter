@@ -355,6 +355,14 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 - Specify your operating system and Python version
 - Provide examples of folder names that aren't working
 
+## 💖 Support This Project
+
+If this tool has been helpful for organizing your ROM collection, consider supporting its development!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-orange?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/kcdworks)
+
+Your support helps maintain and improve this tool for the retrogaming community. Every coffee counts! ☕
+
 ## ⚖️ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
