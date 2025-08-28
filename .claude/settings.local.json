@@ -49,7 +49,9 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "Bash(git merge:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(timeout:*)",
+      "Bash(claude upgrade)"
     ],
     "deny": [],
     "ask": [],

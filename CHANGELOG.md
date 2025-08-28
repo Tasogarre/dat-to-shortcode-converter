@@ -3,6 +3,32 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.11.2] - 2025-08-28
+
+### Added
+- **Context Engineering**: Implemented best practices from industry research (every.to, Reddit, O'Reilly)
+- **Reference System**: Created structured template system with @filepath notation
+- **Dynamic Context**: Current session focus tracking with structured format
+- **Pattern Registry**: Active patterns documentation with historical reference
+- **Template Structure**: Commit examples, PR guidelines, workflow procedures, issue tracking
+
+### Changed  
+- **CLAUDE.md Optimization**: Reduced from 1541 to 1355 lines (12% token reduction)
+- **Lean Navigation**: Transformed from verbose documentation to efficient reference system
+- **Archive System**: Moved resolved bug details to .claude/archive/ for historical reference
+- **Structured Compression**: Applied hierarchical information prioritization
+
+### Technical Improvements
+- **Token Efficiency**: Implemented "reference not paste" principle throughout documentation
+- **Self-Enforcing Updates**: Enhanced maintenance protocols for documentation currency
+- **Modular Architecture**: Separated examples, workflows, patterns, and archived content
+- **Context Quality**: Higher signal-to-noise ratio following context engineering research
+
+### Development Workflow
+- **Best Practices**: Integrated findings from every.to, Reddit communities, context engineering experts
+- **Maintenance Protocol**: Daily/weekly/monthly update cycles for optimal documentation freshness
+- **Reference Templates**: Standardized formats for commits, PRs, issues, and workflows
+
 ## [0.11.1] - 2025-08-28
 
 ### Fixed

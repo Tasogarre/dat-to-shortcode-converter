@@ -5,7 +5,7 @@ Convert ROM collections from DAT naming conventions (No-Intro, TOSEC, GoodTools,
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.11.2-blue)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/status-production--ready-green)](CHANGELOG.md)
 
 ## 🎯 What This Tool Does
@@ -34,12 +34,12 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 ## ✨ Key Features
 
 ### 🚀 **Industry-Leading Coverage**
-- **97.5% success rate** - Successfully processed 55,898 ROM files with 54,522 supported files
-- **58 supported platforms** - Expanded platform support including MSX2, Satellaview, PlayStation Vita
-- **Enhanced Good Tools support** - 30 Good tool platform codes (MSX, Lynx, NGP, SuperVision, Virtual Boy, Vectrex, WonderSwan)
-- **Specialized tool support** - Good tools, MAME, FinalBurn Neo collections  
-- **Enhanced debugging** - Complete visibility into platform detection and file counting
-- **Smart categorization** - Clear distinction between supported vs excluded platforms
+- **97.5% success rate** - Successfully processed 55,898+ ROM files with optimized accuracy
+- **58 supported platforms** - Complete RetroArch compatibility including MSX2, Satellaview, PlayStation Vita
+- **Enhanced Good Tools support** - 30+ Good tool platform codes with improved pattern matching
+- **Specialized tool support** - Good tools, MAME, FinalBurn Neo with advanced preprocessing
+- **Production debugging** - Complete visibility into platform detection with real-time feedback
+- **Smart categorization** - Clear distinction between supported vs excluded platforms with detailed explanations
 
 ### ⚡ **High-Performance Processing**
 - **Real-time progress feedback** - Live progress bars with file names, completion %, time remaining, and processing speed

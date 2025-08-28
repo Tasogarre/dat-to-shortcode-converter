@@ -262,3 +262,4 @@ windows_logs/
 
 # Development Test Files
 dat_to_shortcode_converter.py.backup
+*.backup

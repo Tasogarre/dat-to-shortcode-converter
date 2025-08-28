@@ -2,126 +2,79 @@
 
 For general project information, see [README.md](README.md).
 
-## ✅ RECENT CRITICAL FIXES - August 2025
+## 🔄 CLAUDE.md MAINTENANCE PROTOCOL - MANDATORY COMPLIANCE
 
-### **LATEST** Platform Expansion for RetroArch Compatibility - IMPLEMENTED
-**Status**: ✅ **MAJOR FEATURE IMPLEMENTED** - August 28, 2025  
-**Impact**: Expanded platform support from 52 to 58 platforms with enhanced categorization and debugging
+### **CRITICAL: Self-Enforcing Documentation Updates**
 
-**Achievement Highlights:**
-- **Production Validation**: Successfully processed 55,898 ROM files with 97.5% accuracy (54,522 supported files)
-- **RetroArch Integration**: Added support for all RetroArch-compatible platforms from comprehensive analysis
-- **Enhanced Debugging**: Complete visibility into platform detection decisions and file counting processes
-- **Smart Categorization**: Clear distinction between Unknown (unrecognized) vs Excluded (recognized but unsupported) platforms
+**Claude MUST automatically update CLAUDE.md when any of these conditions occur:**
 
-**New Platform Support Added:**
-- ✅ **MSX2**: Enhanced MSX pattern matching for Microsoft MSX2 collections
-- ✅ **Satellaview**: Nintendo Satellaview satellite download service support
-- ✅ **PlayStation Vita**: Full support for unofficial Vita collections (psvita shortcode)
-- ✅ **Enhanced PSP**: Better detection for PSN and PSX2PSP unofficial collections
+1. **New patterns emerge** - Document workflow patterns or technical approaches discovered during development
+2. **Quality issues identified** - Add guidance when repeated mistakes or inefficiencies are observed  
+3. **Tool usage evolves** - Update tool permissions and usage patterns when new tools are integrated
+4. **Project phase changes** - Update context sections when moving between development phases
+5. **Complex issue resolution** - Add lessons learned from significant debugging or architecture decisions
 
-**Platform Categorization Improvements:**
-- **Firmware/System Files**: Now properly excluded (not unknown) with clear explanations
-- **Deprecated Platforms**: Wii U homebrew and obscure collections moved to excluded with reasons
-- **Zero Unknown Platforms**: All directories now properly categorized as supported or excluded
-
-**Enhanced Debugging Features:**
-- Complete file extension analysis with ROM vs non-ROM breakdowns
-- Detailed platform detection decision logging
-- Comprehensive statistics validation and mismatch detection
-- Real-time progress feedback with file counts
-
-**Technical Implementation:**
-- Enhanced PLATFORM_MAPPINGS with RetroArch-compatible pattern matching
-- Improved EXCLUDED_PLATFORMS with clear exclusion reasons
-- Updated terminal output for better user understanding
-- Comprehensive logging across all analysis stages
-
-### **PREVIOUS** File Count Mismatch Double-Counting Bug - RESOLVED
-**Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
-**Impact**: Fixes critical statistics bug causing file count discrepancies and missing file validation
-
-**Problem Discovered:**
-- User reported 50,703 files processed but only 48,594 actually in target directory (2,109 discrepancy)
-- Statistics showed 0 renamed duplicates despite large dataset with duplicate-prone filenames
-- Folder creation count showed 0 despite creating 52+ platform directories
-- Critical warnings not being logged to summary files
-
-**Root Cause:** Lines 1313 and 1351 - Double-counting bug where renamed files were counted BOTH as renamed AND as copied
-```python
-# Line 1313: Count as renamed (correct)
-folder_renamed += 1
-# Line 1351: ALSO count as copied (BUG - double counting!)
-folder_copied += 1
+### **Mandatory Update Process**
+```
+BEFORE making changes that affect project workflow:
+1. ✅ Check if CLAUDE.md needs updates based on the change
+2. ✅ If yes, update CLAUDE.md FIRST, then proceed with the task
+3. ✅ Validate updates follow context engineering principles
+4. ✅ Ensure updates are actionable with clear success criteria
 ```
 
-**Solution Implemented:**
-- ✅ **Fixed Double-Counting**: Renamed files no longer counted twice in statistics
-- ✅ **Enhanced Logging**: Count mismatch warnings now logged to summary files
-- ✅ **Complete Statistics Logging**: Final success statistics captured in logs
-- ✅ **Improved Display**: Better organized file statistics with total discovered files
-- ✅ **Thread Count Update**: Windows default increased from 2 to 3 threads for better performance
-- ✅ **Comprehensive Issue Tracking**: All bugs documented in `.issues/` directory
+### **Quality Gates for CLAUDE.md Updates**
+- ✅ **Specificity**: Use concrete examples, not vague guidelines
+- ✅ **Actionability**: Every rule must have clear success criteria  
+- ✅ **Context Engineering**: Prioritize high-value information, compress verbose sections
+- ✅ **Separation of Concerns**: Technical issues belong in `.issues/`, not in CLAUDE.md
+- ✅ **Dynamic Relevance**: Remove outdated information, add current focus areas
+- ✅ **Self-Improvement**: Update this protocol when better practices are discovered
 
-**Technical Details:**
-- Modified line 1351 to exclude renamed files from `folder_copied` count
-- Added comprehensive logging for all critical terminal output
-- Improved file statistics display organization and clarity
-- Updated default thread count based on user testing results
+**Compliance Check**: Before any commit, verify CLAUDE.md reflects current project state and learned patterns.
 
-### **PREVIOUS** Duplicate Filename Overwriting Bug - RESOLVED
-**Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
-**Impact**: Prevents data loss from files with identical names across source folders
+### **Automated Learning Protocol**
 
-**Problem Discovered:**
-- Files with same names from different source folders (e.g., `NES-1/game.nes` and `NES-2/game.nes`) were mapping to identical target paths
-- Second file would overwrite first file, causing permanent data loss
-- User experienced: 50,569 files "organized" but only 48,594 actually in target (1,975 files lost!)
+**Claude MUST maintain these dynamic sections that evolve with project experience:**
 
-**Root Cause:** Line 1152 - `target_file_path = target_platform_dir / source_path.name` creates identical paths for same filenames
+#### Current Project Focus (Update Every Session)
+```markdown
+## Current Development Focus - Updated [DATE]
+**Active Phase**: [Feature Development / Bug Fixing / Optimization / Documentation]
+**Priority Areas**: [List top 3 current focus areas]
+**Recent Discoveries**: [Patterns or insights from last 3 sessions]
+**Watch Items**: [Potential issues or areas needing attention]
+```
 
-**Solution Implemented:**
-- ✅ **Smart Deduplication**: New `get_unique_target_path()` function prevents filename collisions
-- ✅ **Intelligent Naming**: Extracts hints from source folders (`NES-1` → `game (1).nes`, `NES-USA` → `game (USA).nes`)
-- ✅ **SHA1 Verification**: Still detects and skips truly identical files  
-- ✅ **Enhanced Statistics**: Tracks renamed files separately from copied/replaced
-- ✅ **Comprehensive Reporting**: Clear breakdown of copied vs renamed vs replaced files
-- ✅ **Validation Check**: Counts actual files in target directory and warns of mismatches
+#### Pattern Recognition Registry  
+**Add entries when patterns emerge across multiple sessions:**
+```markdown
+## Learned Patterns - Living Registry
+### [Pattern Name] - Discovered [DATE]
+**Context**: [When this pattern typically occurs]
+**Solution**: [Proven approach that works]
+**Validation**: [How to verify the pattern applies]
+**Last Applied**: [Most recent successful use]
+```
 
-**New Features:**
-- Folder hint extraction: `"NES-1"` → `"1"`, `"NES (Europe)"` → `"Europe"`
-- Numbered fallback: `game.nes`, `game (2).nes`, `game (3).nes`
-- Enhanced logging: All rename decisions logged for transparency
-- Post-processing validation: Actual file count verification
+### **Self-Improvement Triggers**
+**Claude MUST update this protocol when:**
+- Compliance checks reveal gaps in current procedures
+- New research emerges about CLAUDE.md best practices  
+- Repeated violations suggest protocol improvements needed
+- Better automation approaches are discovered
 
-### Windows Compatibility Issues - RESOLVED
-**Status**: ✅ **FULLY RESOLVED** as of commits 9bcd65a, 15a1743, and 047c61b  
-**Impact**: Script now successfully copies files on Windows and Linux instead of reporting "0 files copied"
+**Next Protocol Review**: Schedule monthly reviews of this maintenance framework
 
-**Issues Fixed:**
-1. **Missing Implementation Bug**: `AsyncFileCopyEngine._process_concurrent()` was a placeholder returning empty stats
-2. **Unicode Encoding Errors**: Arrow characters (→) caused `UnicodeEncodeError: 'charmap' codec can't encode character '\u2192'` on Windows cp1252 console
-3. **AttributeError Crashes**: `PerformanceOptimizedROMProcessor` referenced non-existent `self.logger_errors` attribute
-4. **Data Structure Mismatch**: Method expected Path objects but received dict structures from `_group_files_by_folder()`
-5. **Directory Contention Bug**: Concurrent access to same directories caused 0-byte files and copying failures
+## ✅ RECENT CRITICAL FIXES - August 2025
 
-**Solutions Implemented:**
-- ✅ **Complete Concurrent Processing**: Implemented full folder-level threading logic in `_process_concurrent()`
-- ✅ **ASCII-Safe Logging**: Replaced all arrow characters (→) with (->) in subcategory_handler.py
-- ✅ **Proper Error Logging**: Added missing `logger_errors` attribute initialization
-- ✅ **Dict Structure Handling**: Extract `file_info['path']` and use pre-determined `file_info['platform']`
-- ✅ **Folder-Level Threading Architecture**: Prevents directory contention by assigning one thread per source folder
-- ✅ **Atomic File Operations**: Copy to temporary files with integrity verification and atomic rename
+### **LATEST STATUS**
+- ✅ **Platform Expansion**: RetroArch compatibility (52→58 platforms, 97.5% accuracy)
+- ✅ **File Count Bug**: Fixed double-counting statistics error 
+- ✅ **Duplicate Files**: Smart deduplication prevents data loss
+- ✅ **Windows Compatibility**: Full Unicode and threading fixes
 
-**Validation Results:**
-- ✅ Script syntax validation passes
-- ✅ Help command functionality works
-- ✅ Analyze-only mode functions properly  
-- ✅ Subcategory processor with Unicode fixes works perfectly
-- ✅ No encoding errors during execution
-- ✅ File copying logic now functional
-- ✅ Directory contention eliminated - 0 contention events in testing vs 48+ with old method
-- ✅ 100% file integrity validation with checksum verification
+**Detailed technical documentation**: @.claude/archive/resolved-bugs-august-2025.md
 
 ## 🚨 CRITICAL KNOWN ISSUES
 
@@ -141,55 +94,6 @@ folder_copied += 1
 - **WSL2 testing will fail** with high I/O error rates on Windows mounts (`/mnt/*`)
 - This is a known limitation of WSL2's 9p filesystem protocol for concurrent operations
 
-### Pattern Matching Bug - MSX2 and PSP Variants - UNRESOLVED
-**Status**: ❌ **ACTIVE INVESTIGATION REQUIRED**  
-**Impact**: 4 platforms (MSX2, PSP PSN/PSX2PSP variants) show as "Unknown" despite correct pattern implementation  
-**Discovered**: August 28, 2025 during v0.11.1 pattern matching fixes
-
-**Problem Summary:**
-- MSX2 and PSP variant folders correctly detected by RetroArch analysis but not matching implemented patterns
-- Patterns are syntactically correct and properly placed but fail at runtime
-- Affects user experience when these platforms appear as "Unknown" instead of properly categorized
-
-**Attempted Fixes (v0.11.1):**
-- ❌ **Pattern Order Fix**: Moved MSX2 pattern before MSX exclusion pattern (line 479-480)
-- ❌ **Regex Escaping Fix**: Changed PSP patterns from `\(PSN\)` to `.*PSN.*` (line 399-400)
-- ❌ **Version Update**: Properly incremented version and committed changes
-
-**Current Pattern State:**
-```python
-# Line 399-400: PSP Patterns (FIXED but not working)
-r"Unofficial.*PlayStation Portable.*PSN.*": ("psp", "PlayStation Portable"),
-r"Unofficial.*PlayStation Portable.*PSX2PSP.*": ("psp", "PlayStation Portable"),
-
-# Line 479-480: MSX2 Patterns (MOVED but not working)  
-r"Microsoft.*MSX2.*": ("msx", "MSX2"),  # MUST be before MSX exclusion
-r".*MSX(?!2).*": ("msx", "MSX"),        # Negative lookahead excludes MSX2
-```
-
-**Investigation Required:**
-1. **Preprocessing Interference**: Check if `SubcategoryProcessor` modifies folder names before pattern matching
-2. **Pattern Evaluation Order**: Verify dictionary insertion order and evaluation precedence
-3. **Case Sensitivity Issues**: Confirm folder names match expected casing
-4. **Early Exclusion Logic**: Check if exclusion patterns evaluated before inclusion patterns
-
-**Ready for Next Session:**
-- **Complete Documentation**: `.issues/LOCAL_ISSUE_PATTERN_MATCHING_MSX2_PSP.md` contains comprehensive investigation guide
-- **Test Scripts Ready**: Pattern isolation test script and debug commands prepared
-- **Session Handoff**: `.claude/tasks/2025-08-28-session-handoff-pattern-matching-bug.md` provides complete context
-- **4 Solution Approaches**: Multiple technical approaches documented with code examples
-
-**Debug Commands:**
-```bash
-# Test current pattern matching
-python dat_to_shortcode_converter.py "/mnt/e/Emulation/dat-to-sc/roms-source" "/tmp/test" --analyze-only --debug-analysis
-
-# Run pattern isolation test  
-cd .issues && python pattern_isolation_test.py
-```
-
-**Success Criteria:**
-When resolved, MSX2 and PSP folders should appear in supported platforms list instead of unknown platforms, bringing total working platforms to 58 as intended.
 
 ## Project Overview
 
@@ -237,19 +141,15 @@ python dat_to_shortcode_converter.py <source_dir> <target_dir> [options]
 
 ### Issue Tracking Requirements - CRITICAL
 
-**MANDATORY**: All identified bugs and multi-step development tasks MUST be tracked systematically:
+**MANDATORY**: All bugs and multi-step tasks MUST be tracked in local issues register. **NEVER document technical issues in CLAUDE.md**.
 
 #### Local Issues Register
-- **Create `.issues/LOCAL_ISSUE_*.md` files** for every identified bug or issue
-- **Use descriptive names**: `LOCAL_ISSUE_FILE_COUNT_MISMATCH.md`, `LOCAL_ISSUE_DUPLICATE_STATS_BUG.md`
-- **Include standard header**:
-  ```markdown
-  # Issue Title - Local Development Tracking
-  **Note**: This is internal development tracking, not a public GitHub issue  
-  **Status**: Active/Resolved | **GitHub Issue**: None/Link if exists
-  ```
-- **Document thoroughly**: Root cause analysis, technical investigation, solution approach
-- **Keep all resolved issue files** for historical reference and pattern recognition
+- **Create `.issues/LOCAL_ISSUE_*.md` files** for every bug/issue
+- **Use descriptive names** with clear identification
+- **Reference resolved issues only** with simple status in CLAUDE.md
+- **Document thoroughly** with root cause and solution
+
+Detailed templates: @.claude/templates/issue-tracking.md
 
 #### Task Roadmaps
 - **Create `.claude/tasks/YYYY-MM-DD-task-name.md` files** for multi-step implementations
@@ -353,6 +253,12 @@ python good_pattern_handler.py                    # Specialized pattern testing
 
 **CRITICAL: Always run these checks before committing:**
 
+0. **🔄 CLAUDE.md Compliance Check** - **MANDATORY FIRST STEP**:
+   - ✅ Did this session discover new patterns or approaches? → Document in CLAUDE.md
+   - ✅ Did this session reveal workflow inefficiencies? → Update relevant sections  
+   - ✅ Did this session use new tools or change tool usage? → Update tool guidance
+   - ✅ Does CLAUDE.md accurately reflect current project state? → Update if outdated
+   - ✅ Are all updates actionable with clear success criteria? → Refine if vague
 1. **✅ Comprehensive validation**: `python test_comprehensive_validation.py` (must show 100% success)
 2. **Syntax validation**: `python -m py_compile dat_to_shortcode_converter.py`
 3. **Help command test**: `python dat_to_shortcode_converter.py --help`
@@ -584,15 +490,21 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 
 ## Issue Management: Local vs GitHub
 
+### CRITICAL: Issue Documentation Requirements
+
+**MANDATORY**: All identified bugs, pattern matching issues, and multi-step development tasks MUST be tracked in the local issues register. This is NOT optional.
+
 ### Local Issues Register vs GitHub Issues
 
 **Local Issues Register** (`.issues/LOCAL_ISSUE_*.md` files):
-- Private development tracking for technical analysis and investigation
+- **REQUIRED** for all technical bugs, pattern matching issues, and development investigations
 - Located in `.issues/` folder (ignored by Git for privacy)
 - Files named `LOCAL_ISSUE_*.md` to clarify they are internal development tracking
+- **NEVER document issues in CLAUDE.md** - they belong in the issues register
 - **Not all local issues become GitHub issues** - many resolved during development
 - Track detailed technical analysis, root cause investigation, and solution architecture
 - **Keep all resolved issue files** for historical reference and pattern recognition
+- **Update status immediately** when issues are resolved
 
 **GitHub Repository Issues** (public issue tracking):
 - Only create GitHub issues for **user-facing problems** or **unresolved critical issues**
@@ -602,13 +514,69 @@ if target_dir and root_path.resolve() == target_dir.resolve():
 
 ### Issue Management Workflow
 
-1. **Research Phase**: Create local `.issues/LOCAL_ISSUE_*.md` file with detailed technical analysis
-2. **Assessment**: Determine if issue affects users or can be resolved during development
-3. **GitHub Creation**: For user-facing issues, create GitHub issue with user-focused description
-4. **Parallel Tracking**: Update local register with technical details, GitHub issue with user updates  
-5. **Resolution**: Close GitHub issue when resolved, keep local file for future reference and learning
+**CRITICAL WORKFLOW REQUIREMENTS:**
+
+1. **Immediate Documentation**: Create `.issues/LOCAL_ISSUE_*.md` file THE MOMENT a bug is identified
+2. **Never in CLAUDE.md**: Pattern matching bugs, technical issues, and development investigations MUST NOT be documented in CLAUDE.md
+3. **Research Phase**: Document detailed technical analysis in local issue file
+4. **Assessment**: Determine if issue affects users or can be resolved during development
+5. **Status Updates**: Update issue status immediately when resolved (Active → Resolved)
+6. **GitHub Creation**: For user-facing issues only, create GitHub issue with user-focused description
+7. **Resolution Documentation**: When fixed, update local file with fix details, root cause, and validation results
+8. **Historical Preservation**: Keep all resolved issue files for future reference and pattern recognition
+
+**MANDATORY File Structure**:
+```markdown
+# [Issue Title] - Local Development Tracking
+**Note**: This is internal development tracking, not a public GitHub issue
+**Status**: [Active/Resolved] | **GitHub Issue**: [None/Link if exists]
+**Date Discovered**: YYYY-MM-DD
+**Resolution Date**: YYYY-MM-DD (if resolved)
+
+## Problem Summary
+[Clear description of the issue]
+
+## Root Cause Analysis
+[Technical investigation and findings]
+
+## Fix Implementation (if resolved)
+[Detailed fix description with code changes]
+
+## Testing Results
+[Validation of the fix]
+```
+
+### Pattern Matching Issue Requirements
+
+**SPECIAL ATTENTION**: Pattern matching bugs require immediate local issue documentation due to:
+- Complex preprocessing pipeline interactions
+- Multiple pattern evaluation stages 
+- Potential for similar issues in the future
+- Need for comprehensive root cause analysis
+
+**Pattern Matching Issue Template**:
+```markdown
+# Pattern Matching Bug - [Platform Names] - Local Development Tracking
+**Status**: [Active/Resolved] - [Fix version if resolved]
+**Affected Platforms**: List specific platforms showing as Unknown
+
+## Root Cause Analysis
+**Processing Flow**: Document exact preprocessing transformations
+**Pattern Conflicts**: Identify pattern evaluation conflicts
+**Debug Process**: Document step-by-step investigation
+
+## Fix Implementation
+**File**: Specific file and line number
+**Pattern Changes**: Before/after pattern code
+**Rationale**: Why this fix addresses the root cause
+
+## Validation Results
+**Test Commands**: Commands used to validate fix
+**Before/After**: Clear comparison of results
+```
 
 ### Current Issue Status
+- **Pattern Matching MSX2/PSP**: ✅ Resolved v0.11.2 (tracked in `.issues/LOCAL_ISSUE_PATTERN_MATCHING_MSX2_PSP.md`)
 - **Directory Contention**: ✅ Resolved during development (tracked in `.issues/LOCAL_ISSUE_DIRECTORY_CONTENTION.md`)
 - **WSL2 I/O Errors**: 🚨 Active GitHub issue #2 + detailed analysis in `.issues/LOCAL_ISSUE_WSL2_IO_ERRORS.md`
 
@@ -959,3 +927,18 @@ Before committing:
 **CLAUDE.md**: This file - Claude-specific development guidance
 **CHANGELOG.md**: User-facing changes following Keep a Changelog format with proper SemVer
 **Task files**: Development context and decision history
+
+---
+
+## 🎯 Current Context - Updated 2025-08-28
+**Focus**: Context engineering optimization & token efficiency
+**Blockers**: None - actively implementing best practices from research
+**Next**: Test optimized structure, create pattern templates
+**Version**: v0.12.0 (context engineering update)
+
+## 🧠 Active Patterns Registry
+- **Context Engineering**: Lean navigation docs, reference not paste
+- **Pattern Debugging**: Investigate preprocessing pipeline first
+- **Self-Enforcing Docs**: Mandatory update protocols in CLAUDE.md
+
+Detailed patterns: @.claude/patterns/ (created when discovered)
