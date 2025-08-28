@@ -3,6 +3,26 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.4] - 2025-08-28
+
+### Fixed
+- **CRITICAL: Fatal Logger Attribute Error** - Fixed AttributeError: 'AsyncFileCopyEngine' object has no attribute 'logger_errors' causing crashes during validation
+- **Windows Defender File Verification** - Enhanced adaptive delays and retry logic for antivirus scanning interference (50ms-200ms based on file size)
+- **Progress Display Accuracy** - Fixed progress bar to show actual files being processed rather than total discovered files
+- **Incomplete Processing Prevention** - Improved file counting to prevent ~6,000 files being skipped due to incorrect totals
+
+### Technical Improvements  
+- **Adaptive Antivirus Delays**: File-size based delays (1MB: 50ms, 10MB: 100ms, >10MB: 200ms) with retry logic for locked files
+- **Enhanced Error Recovery**: CRC verification with 3-attempt retry for antivirus interference (100ms, 200ms delays)
+- **Accurate Progress Tracking**: Progress display now reflects files actually being processed rather than discovery count
+- **Phase-Based Progress Display**: Clear indication of processing phase (🔍 Discovering vs 📦 Copying)
+
+### Previous Issues Resolved
+- Validation no longer crashes with logger attribute errors
+- Windows Defender scanning no longer causes false "missing file" reports  
+- Progress bar accurately shows copy progress instead of misleading discovery counts
+- File verification works reliably with Windows antivirus software
+
 ## [0.12.3] - 2025-08-28
 
 ### Fixed

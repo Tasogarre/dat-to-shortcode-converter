@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.3"
+__version__ = "0.12.4"
 VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1057,13 +1057,33 @@ def copy_file_with_verification(source_path: Path, target_path: Path, operations
         # Direct copy with no temp files
         shutil.copy2(source_path, target_path)
         
-        # Windows AV compatibility: brief pause after creation
+        # Windows AV compatibility: adaptive pause based on file size
         if platform.system() == 'Windows':
-            time.sleep(0.05)  # 50ms for AV scan completion
+            # Get file size for adaptive delay
+            try:
+                file_size = source_path.stat().st_size
+                if file_size < 1_000_000:  # < 1MB
+                    time.sleep(0.05)
+                elif file_size < 10_000_000:  # < 10MB
+                    time.sleep(0.1)
+                else:  # >= 10MB
+                    time.sleep(0.2)
+            except:
+                time.sleep(0.05)  # Fallback to minimal delay
         
-        # Quick CRC32 verification
+        # CRC32 verification with retry logic for antivirus interference
         source_crc = calculate_crc32(source_path)
-        target_crc = calculate_crc32(target_path)
+        
+        # Try target CRC with retry for antivirus scanning
+        for verify_attempt in range(3):
+            try:
+                target_crc = calculate_crc32(target_path)
+                break
+            except (OSError, PermissionError):
+                if verify_attempt < 2:
+                    time.sleep(0.1 * (verify_attempt + 1))  # 100ms, 200ms delays
+                else:
+                    return False, "Target file locked after copy (antivirus scanning)"
         
         if source_crc != target_crc:
             # Remove failed copy and report
@@ -1318,8 +1338,9 @@ class ModernTerminalDisplay:
             
         lines = []
         
-        # Overall Progress Panel
-        lines.append("┌─ OVERALL PROGRESS ───────────────────────────────────────────────────────┐")
+        # Overall Progress Panel with phase information
+        phase = kwargs.get('phase', '📊 Processing')
+        lines.append(f"┌─ {phase} ─────────────────────────────────────────────────────────────┐")
         current = kwargs.get('current', 0)
         total = kwargs.get('total', 0)
         rate = kwargs.get('rate', 0)
@@ -2211,7 +2232,7 @@ class AsyncFileCopyEngine:
             if discrepancy_details:
                 self.operations_logger.warning(f"File count validation FAILED: {'; '.join(discrepancy_details)}")
                 for detail in discrepancy_details:
-                    self.logger_errors.error(f"VALIDATION: {detail}")
+                    self.errors_logger.error(f"VALIDATION: {detail}")
             else:
                 self.operations_logger.info(f"File count validation PASSED: {actual_count} files confirmed in target")
             
@@ -2220,7 +2241,7 @@ class AsyncFileCopyEngine:
         except Exception as e:
             error_detail = f"Validation error: {str(e)}"
             discrepancy_details.append(error_detail)
-            self.logger_errors.error(f"CRITICAL: Target file validation failed: {str(e)}")
+            self.errors_logger.error(f"CRITICAL: Target file validation failed: {str(e)}")
             return 0, discrepancy_details
 
 class PlatformAnalyzer:
@@ -3282,8 +3303,11 @@ class EnhancedROMOrganizer:
         # Convert file list to folder-grouped structure for adaptive processing
         files_by_folder = self._group_files_by_folder(all_files, platforms)
         
-        # Simple progress callback compatible with current AsyncFileCopyEngine
+        # Enhanced progress callback that tracks actual processing, not discovery
         processed_count = 0
+        # Calculate actual files to process (exclude files that won't be processed)
+        total_files_to_process = sum(len(files) for files in files_by_folder.values())
+        
         def progress_callback(file_desc):
             # Extract info from file description like "platform/filename"
             nonlocal processed_count
@@ -3293,22 +3317,23 @@ class EnhancedROMOrganizer:
             timestamp = datetime.now().strftime("%H:%M:%S")
             progress_display.add_activity(timestamp, file_desc, "copied", "")
             
-            # Update live progress
+            # Update live progress with ACTUAL processing totals
             elapsed = (datetime.now() - processing_start).total_seconds()
             rate = processed_count / max(elapsed, 0.1)
-            eta = (len(all_files) - processed_count) / max(rate, 0.1)
+            eta = (total_files_to_process - processed_count) / max(rate, 0.1)
             
             # Update average rate
             progress_display.stats['avg_rate'] = rate
             
             # Update display every 50 files to avoid flickering
-            if processed_count % 50 == 0 or processed_count == len(all_files):
+            if processed_count % 50 == 0 or processed_count == total_files_to_process:
                 progress_display.update_live_progress(
                     current=processed_count,
-                    total=len(all_files),
+                    total=total_files_to_process,
                     rate=rate,
                     eta_seconds=eta,
-                    elapsed=elapsed
+                    elapsed=elapsed,
+                    phase="📦 Copying"
                 )
         
         processing_stats = self.async_copy_engine.copy_files_adaptive(
