@@ -141,6 +141,56 @@ folder_copied += 1
 - **WSL2 testing will fail** with high I/O error rates on Windows mounts (`/mnt/*`)
 - This is a known limitation of WSL2's 9p filesystem protocol for concurrent operations
 
+### Pattern Matching Bug - MSX2 and PSP Variants - UNRESOLVED
+**Status**: ❌ **ACTIVE INVESTIGATION REQUIRED**  
+**Impact**: 4 platforms (MSX2, PSP PSN/PSX2PSP variants) show as "Unknown" despite correct pattern implementation  
+**Discovered**: August 28, 2025 during v0.11.1 pattern matching fixes
+
+**Problem Summary:**
+- MSX2 and PSP variant folders correctly detected by RetroArch analysis but not matching implemented patterns
+- Patterns are syntactically correct and properly placed but fail at runtime
+- Affects user experience when these platforms appear as "Unknown" instead of properly categorized
+
+**Attempted Fixes (v0.11.1):**
+- ❌ **Pattern Order Fix**: Moved MSX2 pattern before MSX exclusion pattern (line 479-480)
+- ❌ **Regex Escaping Fix**: Changed PSP patterns from `\(PSN\)` to `.*PSN.*` (line 399-400)
+- ❌ **Version Update**: Properly incremented version and committed changes
+
+**Current Pattern State:**
+```python
+# Line 399-400: PSP Patterns (FIXED but not working)
+r"Unofficial.*PlayStation Portable.*PSN.*": ("psp", "PlayStation Portable"),
+r"Unofficial.*PlayStation Portable.*PSX2PSP.*": ("psp", "PlayStation Portable"),
+
+# Line 479-480: MSX2 Patterns (MOVED but not working)  
+r"Microsoft.*MSX2.*": ("msx", "MSX2"),  # MUST be before MSX exclusion
+r".*MSX(?!2).*": ("msx", "MSX"),        # Negative lookahead excludes MSX2
+```
+
+**Investigation Required:**
+1. **Preprocessing Interference**: Check if `SubcategoryProcessor` modifies folder names before pattern matching
+2. **Pattern Evaluation Order**: Verify dictionary insertion order and evaluation precedence
+3. **Case Sensitivity Issues**: Confirm folder names match expected casing
+4. **Early Exclusion Logic**: Check if exclusion patterns evaluated before inclusion patterns
+
+**Ready for Next Session:**
+- **Complete Documentation**: `.issues/LOCAL_ISSUE_PATTERN_MATCHING_MSX2_PSP.md` contains comprehensive investigation guide
+- **Test Scripts Ready**: Pattern isolation test script and debug commands prepared
+- **Session Handoff**: `.claude/tasks/2025-08-28-session-handoff-pattern-matching-bug.md` provides complete context
+- **4 Solution Approaches**: Multiple technical approaches documented with code examples
+
+**Debug Commands:**
+```bash
+# Test current pattern matching
+python dat_to_shortcode_converter.py "/mnt/e/Emulation/dat-to-sc/roms-source" "/tmp/test" --analyze-only --debug-analysis
+
+# Run pattern isolation test  
+cd .issues && python pattern_isolation_test.py
+```
+
+**Success Criteria:**
+When resolved, MSX2 and PSP folders should appear in supported platforms list instead of unknown platforms, bringing total working platforms to 58 as intended.
+
 ## Project Overview
 
 This is a Python ROM collection management tool that converts DAT naming conventions (No-Intro, TOSEC, GoodTools, Redump) to standardized shortcode folder structures for emulation frontends like EmulationStation, RetroPie, and Batocera.
