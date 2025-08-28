@@ -36,8 +36,8 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.10.1"
-VERSION_DATE = "2025-08-27"
+__version__ = "0.11.0"
+VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
 # Feature flags for experimental features (solopreneur rapid prototyping)
@@ -394,6 +394,13 @@ PLATFORM_MAPPINGS = {
     r"^Nintendo Super Famicom & Super Entertainment System$": ("snes", "Super Nintendo Entertainment System"),
     r"^Nintendo Famicom & Entertainment System$": ("nes", "Nintendo Entertainment System"),
     
+    # NEW: RetroArch-compatible platform additions (v0.11.0)
+    r"Microsoft.*MSX2.*": ("msx", "MSX2"),
+    r"Nintendo.*Satellaview.*": ("satellaview", "Nintendo Satellaview"),
+    r"Unofficial.*PlayStation Portable \(PSN\).*": ("psp", "PlayStation Portable"),
+    r"Unofficial.*PlayStation Portable \(PSX2PSP\).*": ("psp", "PlayStation Portable"),
+    r"Unofficial.*PlayStation Vita.*": ("psvita", "PlayStation Vita"),
+    
     # Sega Systems - Keep genesis and megadrive separate as requested
     r"Sega.*Master System.*": ("mastersystem", "Sega Master System"),
     r"Sega.*Mark III.*": ("mastersystem", "Sega Master System"),
@@ -584,6 +591,13 @@ EXCLUDED_PLATFORMS = {
     r"Magnavox.*Odyssey.*": "Odyssey systems support limited in EmulationStation",
     r"Philips.*Videopac.*": "Videopac support limited in EmulationStation",
     r".*Pokitto.*": "Pokitto not supported by EmulationStation",
+    
+    # NEW: Firmware and unsupported platforms (v0.11.0)
+    r"Nintendo 64DD.*Firmware.*": "Firmware files not game platform",
+    r"Sega Super Control Station.*": "SF-7000 peripheral not game platform",
+    r"System \(Retool\)": "System files not game platform",
+    r"Unofficial.*Wii U \(Digital\).*Deprecated.*": "Wii U homebrew not supported by RetroArch",
+    r"Unofficial.*Obscure Gamers.*": "Homebrew collection not standard platform",
 }
 
 # ROM file extensions for detection
@@ -757,7 +771,8 @@ class RegionalPreferenceEngine:
             "psp": "PlayStation Portable",
             "psvita": "PlayStation Vita",
             "psx": "PlayStation",
-            "saturn": "Sega Saturn",
+            "satellaview": "Nintendo Satellaview",
+            "saturn": "Sega Saturn", 
             "sega32x": "Sega 32X",
             "segacd": "Sega CD",
             "sfc": "Super Famicom",
@@ -3378,7 +3393,7 @@ class EnhancedROMOrganizer:
             selected_platforms = []
             if self.interactive:
                 self.logger_progress.info("Phase 2: Interactive platform selection...")
-                self.selector.show_analysis_summary(platforms, excluded, unknown)
+                self.selector.show_analysis_summary(platforms, excluded, unknown, unknown_files)
                 selected_platforms = self.selector.get_platform_selection(platforms)
                 
                 if not selected_platforms:
@@ -3760,17 +3775,17 @@ Features:
                     print(f"DEBUG: Source directory: {organizer.source_dir}")
                     print(f"DEBUG: ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
                     
-                analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING:")
-                analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
-                analyzer.logger.info(f"  Source directory: {organizer.source_dir}")
+                organizer.analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING:")
+                organizer.analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
+                organizer.analyzer.logger.info(f"  Source directory: {organizer.source_dir}")
                 
                 for unknown_folder in unknown:
                     unknown_dir_path = organizer.source_dir / unknown_folder
                     
                     # Log path construction details
-                    analyzer.logger.info(f"  Checking folder: '{unknown_folder}'")
-                    analyzer.logger.info(f"    Constructed path: {unknown_dir_path}")
-                    analyzer.logger.info(f"    Path exists: {unknown_dir_path.exists()}")
+                    organizer.analyzer.logger.info(f"  Checking folder: '{unknown_folder}'")
+                    organizer.analyzer.logger.info(f"    Constructed path: {unknown_dir_path}")
+                    organizer.analyzer.logger.info(f"    Path exists: {unknown_dir_path.exists()}")
                     
                     if unknown_dir_path.exists():
                         # Count files with detailed logging
@@ -3787,16 +3802,16 @@ Features:
                                     if extension in ROM_EXTENSIONS:
                                         folder_rom_files.append(file)
                         except Exception as e:
-                            analyzer.logger.error(f"    Error walking directory: {e}")
+                            organizer.analyzer.logger.error(f"    Error walking directory: {e}")
                             continue
                         
                         folder_count = len(folder_rom_files)
                         unknown_files_count += folder_count
                         
                         # Log detailed results
-                        analyzer.logger.info(f"    Total files: {len(all_files)}")
-                        analyzer.logger.info(f"    ROM files: {folder_count}")
-                        analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
+                        organizer.analyzer.logger.info(f"    Total files: {len(all_files)}")
+                        organizer.analyzer.logger.info(f"    ROM files: {folder_count}")
+                        organizer.analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
                         
                         if debug_mode:
                             print(f"DEBUG: '{unknown_folder}'")
@@ -3809,18 +3824,35 @@ Features:
                                 non_rom_extensions = extensions_found - ROM_EXTENSIONS
                                 print(f"       Non-ROM extensions: {sorted(non_rom_extensions)}")
                     else:
-                        analyzer.logger.warning(f"    WARNING: Path does not exist!")
+                        organizer.analyzer.logger.warning(f"    WARNING: Path does not exist!")
                         if debug_mode:
                             print(f"DEBUG: '{unknown_folder}' -> PATH DOES NOT EXIST!")
                 
-                analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED: {unknown_files_count}")
+                organizer.analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED: {unknown_files_count}")
                 if debug_mode:
                     print(f"DEBUG: TOTAL unknown files counted: {unknown_files_count}")
                     if unknown_files_count == 0 and len(unknown) > 0:
                         print(f"DEBUG: WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
                         print(f"DEBUG: This suggests either path issues or non-ROM file extensions")
             
-            organizer.selector.show_analysis_summary(platforms, excluded, unknown, unknown_files_count)
+            # DEBUG: Add debugging around the problematic area
+            if debug_mode:
+                print(f"DEBUG: About to call show_analysis_summary...")
+            
+            try:
+                organizer.selector.show_analysis_summary(platforms, excluded, unknown, unknown_files_count)
+                if debug_mode:
+                    print(f"DEBUG: show_analysis_summary completed successfully")
+            except NameError as ne:
+                print(f"DEBUG: NameError in show_analysis_summary: {ne}")
+                import traceback
+                traceback.print_exc()
+                raise
+            except Exception as e:
+                print(f"DEBUG: Exception in show_analysis_summary: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
             
             # Show subcategory processing statistics if requested
             if args.subcategory_stats and organizer.analyzer.subcategory_processor:
@@ -3839,7 +3871,13 @@ Features:
                     subcategory_logger.info(f"{key}: {value}")
                 organizer.analyzer.subcategory_processor.log_statistics()
             
+            if debug_mode:
+                print(f"DEBUG: About to print final completion message...")
+                
             print(f"\n✅ Analysis complete. Found {len(platforms)} supported platforms.")
+            
+            if debug_mode:
+                print(f"DEBUG: Final completion message printed successfully")
         else:
             # Full processing
             stats = organizer.organize_roms()

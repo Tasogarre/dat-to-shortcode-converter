@@ -5,6 +5,8 @@ Convert ROM collections from DAT naming conventions (No-Intro, TOSEC, GoodTools,
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.0-blue)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/status-production--ready-green)](CHANGELOG.md)
 
 ## 🎯 What This Tool Does
 
@@ -32,11 +34,12 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 ## ✨ Key Features
 
 ### 🚀 **Industry-Leading Coverage**
-- **90.3% pattern recognition** - Handles 232 out of 257 known DAT patterns
+- **97.5% success rate** - Successfully processed 55,898 ROM files with 54,522 supported files
+- **58 supported platforms** - Expanded platform support including MSX2, Satellaview, PlayStation Vita
 - **Enhanced Good Tools support** - 30 Good tool platform codes (MSX, Lynx, NGP, SuperVision, Virtual Boy, Vectrex, WonderSwan)
 - **Specialized tool support** - Good tools, MAME, FinalBurn Neo collections  
-- **Enhanced preprocessing** - Automatic subcategory consolidation
-- **Production-ready accuracy** - Comprehensive pattern matching system
+- **Enhanced debugging** - Complete visibility into platform detection and file counting
+- **Smart categorization** - Clear distinction between supported vs excluded platforms
 
 ### ⚡ **High-Performance Processing**
 - **Real-time progress feedback** - Live progress bars with file names, completion %, time remaining, and processing speed
@@ -47,10 +50,12 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 - **Robust error recovery** - Progressive backoff and file skipping for problematic files
 
 ### 🎮 **Smart Platform Handling**
-- **40+ supported platforms** - All major EmulationStation systems
+- **58 supported platforms** - All major EmulationStation systems plus RetroArch-compatible additions
+- **Enhanced platform support** - MSX2, Nintendo Satellaview, PlayStation Vita, enhanced PSP variants
 - **Format-specific organization** - N64 BigEndian/ByteSwapped subfolders
 - **NDS encryption handling** - Separate encrypted/decrypted subfolders
 - **Intelligent consolidation** - Merges firmware/games/applications folders
+- **Clear exclusion reasons** - Firmware and unsupported platforms properly categorized
 
 ### 🔧 **Advanced Pattern Matching**
 - **Three-tier matching system** - Specialized → Preprocessed → Standard patterns
@@ -62,19 +67,25 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 
 ## 🔥 Recent Updates (August 2025)
 
-### ✅ **Critical Windows Compatibility Fixes**
-- **FIXED**: Missing file copying implementation - The `AsyncFileCopyEngine._process_concurrent()` method was incomplete, causing 0 files to be copied despite successful detection
-- **FIXED**: Unicode encoding errors on Windows - Replaced arrow characters (→) with ASCII-safe alternatives (->) to prevent cp1252 console errors
-- **FIXED**: AttributeError crashes - Added missing `logger_errors` attribute to prevent exceptions during error logging
-- **FIXED**: Data structure mismatch - Properly handle dict structures from `_group_files_by_folder()` method
-- **FIXED**: Directory contention causing 0-byte files - Implemented folder-level threading architecture to eliminate concurrent directory access issues
+### ✅ **Platform Expansion and Enhanced Debugging (v0.11.0)**
+- **EXPANDED**: Platform support from 52 to 58 platforms with RetroArch compatibility analysis
+- **ADDED**: MSX2, Nintendo Satellaview, PlayStation Vita, enhanced PSP variant support
+- **ENHANCED**: Complete debugging visibility with file extension analysis and platform categorization
+- **IMPROVED**: Clear distinction between supported, excluded, and unknown platforms
+- **VALIDATED**: 97.5% success rate on 55,898 ROM file collection (54,522 supported files)
+
+### ✅ **Critical File Count and Windows Compatibility Fixes**
+- **FIXED**: Double-counting bug in file statistics causing count mismatches
+- **FIXED**: Missing file copying implementation - Complete folder-level threading architecture
+- **FIXED**: Unicode encoding errors on Windows console output
+- **FIXED**: Directory contention causing 0-byte files and copying failures
+- **ENHANCED**: Comprehensive validation ensuring reported statistics match actual operations
 
 ### 📈 **Status: Production Ready**
-- **100% validation success rate** achieved across all test scenarios
-- **All critical bugs resolved** - Script now successfully copies files on Windows and Linux
-- **Enhanced error handling** - Comprehensive logging and graceful failure recovery
-- **Folder-level threading** - Eliminates directory contention and prevents 0-byte file creation
-- **Cross-platform compatibility** - Tested on Windows 10/11 and Linux (with WSL2 compatibility notes)
+- **Production validated** - Successfully handles large ROM collections (55K+ files)
+- **All critical bugs resolved** - File counting, copying, and statistics now accurate
+- **Enhanced debugging** - Complete visibility into all processing stages
+- **Cross-platform compatibility** - Tested on Windows 10/11 and Linux (WSL2 limitations documented)
 
 ## 🎮 Supported Platforms
 

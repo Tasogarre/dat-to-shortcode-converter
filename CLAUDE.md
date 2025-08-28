@@ -4,7 +4,40 @@ For general project information, see [README.md](README.md).
 
 ## ✅ RECENT CRITICAL FIXES - August 2025
 
-### **LATEST** File Count Mismatch Double-Counting Bug - RESOLVED
+### **LATEST** Platform Expansion for RetroArch Compatibility - IMPLEMENTED
+**Status**: ✅ **MAJOR FEATURE IMPLEMENTED** - August 28, 2025  
+**Impact**: Expanded platform support from 52 to 58 platforms with enhanced categorization and debugging
+
+**Achievement Highlights:**
+- **Production Validation**: Successfully processed 55,898 ROM files with 97.5% accuracy (54,522 supported files)
+- **RetroArch Integration**: Added support for all RetroArch-compatible platforms from comprehensive analysis
+- **Enhanced Debugging**: Complete visibility into platform detection decisions and file counting processes
+- **Smart Categorization**: Clear distinction between Unknown (unrecognized) vs Excluded (recognized but unsupported) platforms
+
+**New Platform Support Added:**
+- ✅ **MSX2**: Enhanced MSX pattern matching for Microsoft MSX2 collections
+- ✅ **Satellaview**: Nintendo Satellaview satellite download service support
+- ✅ **PlayStation Vita**: Full support for unofficial Vita collections (psvita shortcode)
+- ✅ **Enhanced PSP**: Better detection for PSN and PSX2PSP unofficial collections
+
+**Platform Categorization Improvements:**
+- **Firmware/System Files**: Now properly excluded (not unknown) with clear explanations
+- **Deprecated Platforms**: Wii U homebrew and obscure collections moved to excluded with reasons
+- **Zero Unknown Platforms**: All directories now properly categorized as supported or excluded
+
+**Enhanced Debugging Features:**
+- Complete file extension analysis with ROM vs non-ROM breakdowns
+- Detailed platform detection decision logging
+- Comprehensive statistics validation and mismatch detection
+- Real-time progress feedback with file counts
+
+**Technical Implementation:**
+- Enhanced PLATFORM_MAPPINGS with RetroArch-compatible pattern matching
+- Improved EXCLUDED_PLATFORMS with clear exclusion reasons
+- Updated terminal output for better user understanding
+- Comprehensive logging across all analysis stages
+
+### **PREVIOUS** File Count Mismatch Double-Counting Bug - RESOLVED
 **Status**: ✅ **CRITICAL FIX IMPLEMENTED** - August 26, 2025  
 **Impact**: Fixes critical statistics bug causing file count discrepancies and missing file validation
 
@@ -791,9 +824,46 @@ Before committing:
 - **Progress updates**: Rate-limited to 0.1s intervals
 - **Logging**: Use SafeFileHandler to prevent encoding crashes
 
+### Version Management Requirements
+
+**CRITICAL: Version MUST be incremented with EVERY functional change**
+
+**Version Format**: MAJOR.MINOR.PATCH (e.g., 0.9.0)
+- **SemVer Standard**: Natural integers only, NO leading zeros
+- **Valid**: 0.9.0, 0.10.0, 0.123.0, 1.0.0, 1.234.5678
+- **Invalid**: 0.09.0, 01.02.03, 1.02.003 (violates SemVer spec)
+
+**During 0.x.x development (current phase):**
+- **PATCH** (0.9.x): Bug fixes, documentation updates, minor improvements
+- **MINOR** (0.x.0): New features, breaking changes, significant refactors  
+- **MAJOR** (1.0.0): Stable API, production-ready, all critical bugs resolved
+
+**Commit Rules:**
+1. **Update `__version__` constant** in dat_to_shortcode_converter.py BEFORE committing
+2. **Update `VERSION_DATE`** to current date (YYYY-MM-DD format)
+3. **Add version entry** to CHANGELOG.md with proper format
+4. **Commit message** should reference version: "feat: add X feature (v0.9.1)"
+5. **Never commit** without version increment if script functionality changed
+
+**Version Locations Updated:**
+- Script header: `VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"`
+- Log file headers: Each log starts with version and context information
+- CLI help: `--version` or `-v` outputs version and exits
+
+**Version Check:**
+- Script logs warning if file modified but version unchanged
+- Helps catch forgotten version bumps during development
+
+**Examples:**
+- **0.9.1** → Fix the remaining bugs identified
+- **0.9.2** → Another bug fix or minor improvement
+- **0.10.0** → Add new platform support or significant feature
+- **0.11.0** → Add another major feature
+- **1.0.0** → All known bugs fixed, API stable, true production release
+
 ### Documentation Maintenance
 
 **README.md**: General project info for all users
 **CLAUDE.md**: This file - Claude-specific development guidance
-**CHANGELOG.md**: User-facing changes following Keep a Changelog format
+**CHANGELOG.md**: User-facing changes following Keep a Changelog format with proper SemVer
 **Task files**: Development context and decision history

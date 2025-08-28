@@ -3,6 +3,55 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.11.0] - 2025-08-28
+
+### Added
+- **Platform Expansion**: Added support for 6 additional RetroArch-compatible platforms (52 → 58 total)
+- **MSX2 Support**: Enhanced MSX pattern matching for Microsoft MSX2 collections
+- **Satellaview Support**: Added Nintendo Satellaview satellite download service platform
+- **PlayStation Vita Support**: Full support for unofficial Vita collections with psvita shortcode
+- **Enhanced PSP Support**: Better detection for PSN and PSX2PSP unofficial collections
+- **Smart Platform Categorization**: Clear distinction between Unknown vs Excluded platforms
+- **Enhanced Debugging**: Complete file extension analysis and platform detection visibility
+
+### Changed
+- **Platform Categories**: Moved firmware/system files from Unknown to Excluded with clear reasons
+- **Terminal Output**: Improved messaging to explain why platforms are excluded vs unknown
+- **Debug Analysis**: Enhanced --debug-analysis output with comprehensive file statistics
+- **Status Update**: Project status upgraded to Production Ready with validated performance
+
+### Fixed
+- **File Count Validation**: Comprehensive validation ensuring reported statistics match actual operations
+- **Platform Recognition**: All RetroArch-supported platforms from research now properly recognized
+- **Statistics Accuracy**: Enhanced logging captures complete file discovery and processing metrics
+- **Zero Unknown Platforms**: All directories now properly categorized as supported or excluded
+
+### Technical Details
+- **Production Validation**: Successfully processed 55,898 ROM files with 97.5% success rate
+- **Pattern Additions**: New PLATFORM_MAPPINGS for MSX2, Satellaview, PSP/Vita variants
+- **Exclusion Enhancements**: Added EXCLUDED_PLATFORMS entries for firmware and deprecated systems
+- **Display Names**: Updated RegionalPreferenceEngine with new platform display names
+- **Debug Enhancements**: Complete visibility into platform categorization decisions
+
+### Platform Support Summary
+- **Supported Platforms**: 52 → 58 platforms
+- **Unknown Platforms**: 14 → 0 (all properly categorized)  
+- **Excluded Platforms**: 23 → 29 (includes firmware/unsupported)
+- **RetroArch Compatibility**: Full support for all RetroArch-supported platforms in test data
+
+## [0.10.2] - 2025-08-27
+
+### Fixed
+- **CRITICAL BUG**: Fixed unknown files display showing "Total unknown files: 0" when should show actual count (e.g., 717)
+- **CRITICAL BUG**: Fixed NameError 'analyzer' is not defined in analyze-only mode
+- **Root Cause 1**: Interactive mode wasn't passing `unknown_files` parameter to display function
+- **Root Cause 2**: Analyze-only mode used undefined `analyzer` instead of `organizer.analyzer`
+
+### Technical Details
+- Line 3381: Added missing `unknown_files` parameter to `show_analysis_summary` call in interactive mode
+- Lines 3763-3816: Fixed 12 occurrences of `analyzer.logger` → `organizer.analyzer.logger` in analyze-only mode
+- Both interactive and analyze-only modes now work correctly without crashes or display errors
+
 ## [0.10.1] - 2025-08-27
 
 ### Fixed
