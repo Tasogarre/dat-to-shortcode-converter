@@ -3,6 +3,22 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.3] - 2025-08-28
+
+### Fixed
+- **CRITICAL: CTRL+C Graceful Shutdown** - Implemented cooperative thread shutdown mechanism to properly stop file processing when interrupted
+- **Excluded Platform Count Display** - Fixed timing issue where progress display showed intermediate counts (27) vs final counts (30) after complete analysis
+
+### Technical Improvements
+- **Thread Coordination**: Removed sys.exit(0) from signal handler and added shutdown_handler parameter throughout AsyncFileCopyEngine
+- **Cooperative Shutdown**: Added shutdown checks every 10 files in processing loops with proper ThreadPoolExecutor future cancellation
+- **Display Timing**: Progress display now shows final accurate counts only after all directories have been processed and loop completes
+- **Signal Handling**: Enhanced graceful shutdown where threads complete current work before stopping instead of abrupt termination
+
+### Previous Issues Resolved
+- CTRL+C now properly stops processing instead of showing "Shutdown complete" while continuing to process thousands more files
+- Platform count displays are now consistent throughout the application (no more 27 vs 30 discrepancies)
+
 ## [0.12.2] - 2025-08-28
 
 ### Added
