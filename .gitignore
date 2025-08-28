@@ -227,6 +227,8 @@ test_source/
 test_target/
 roms-source/
 roms-target/
+test-*/
+test-*-*/
 
 # Local Issues Register - Development tracking (not GitHub issues)
 .issues/
