@@ -20,6 +20,7 @@ class GoodPatternHandler:
         'SNES': ('snes', 'Super Nintendo Entertainment System'), 
         'N64': ('n64', 'Nintendo 64'),
         'Gen': ('genesis', 'Sega Genesis'),
+        'GEN': ('genesis', 'Sega Genesis'),  # Uppercase variant
         'SMS': ('mastersystem', 'Sega Master System'),
         'GG': ('gamegear', 'Sega Game Gear'),
         '32X': ('sega32x', 'Sega 32X'),
@@ -27,6 +28,7 @@ class GoodPatternHandler:
         'SAT': ('saturn', 'Sega Saturn'),
         'PCE': ('pcengine', 'PC Engine'),
         'Lynx': ('atarilynx', 'Atari Lynx'),
+        'LYNX': ('atarilynx', 'Atari Lynx'),  # Uppercase variant
         '5200': ('atari5200', 'Atari 5200'),
         '7800': ('atari7800', 'Atari 7800'),
         '2600': ('atari2600', 'Atari 2600'),
@@ -35,8 +37,17 @@ class GoodPatternHandler:
         'A52': ('atari5200', 'Atari 5200'),
         'GBC': ('gbc', 'Game Boy Color'),
         'GB': ('gb', 'Game Boy'),
+        'GBX': ('gb', 'Game Boy'),  # Game Boy variants
         'GBA': ('gba', 'Game Boy Advance'),
-        'COL': ('coleco', 'ColecoVision'),
+        'COL': ('colecovision', 'ColecoVision'),
+        'COCO': ('coco', 'TRS-80 Color Computer'),
+        'MSX1': ('msx', 'MSX'),
+        'MSX2': ('msx', 'MSX2'),  # Map to msx since msx2 is not a standard ES platform
+        'NGPX': ('ngp', 'Neo Geo Pocket'),
+        'SV': ('supervision', 'Watara Supervision'),
+        'VBOY': ('virtualboy', 'Virtual Boy'),
+        'VECT': ('vectrex', 'Vectrex'),
+        'WSX': ('wonderswan', 'WonderSwan'),
         'INTV': ('intellivision', 'Mattel Intellivision'),
     }
     
