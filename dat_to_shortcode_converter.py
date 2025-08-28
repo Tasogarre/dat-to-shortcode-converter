@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.11.1"
+__version__ = "0.11.2"
 VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -476,7 +476,7 @@ PLATFORM_MAPPINGS = {
     r"3DO.*": ("3do", "3DO Interactive Multiplayer"),
     r"Amstrad.*CPC.*": ("amstradcpc", "Amstrad CPC"),
     r"Apple.*Apple II.*": ("apple2", "Apple II"),
-    r"Microsoft.*MSX2.*": ("msx", "MSX2"),  # Must come BEFORE MSX exclusion pattern
+    r"^MSX2$": ("msx", "MSX2"),  # Must come BEFORE MSX exclusion pattern (matches preprocessed name)
     r".*MSX(?!2).*": ("msx", "MSX"),
     r"Sinclair.*ZX Spectrum.*": ("zxspectrum", "ZX Spectrum"),
     r"Microsoft.*Xbox(?!\s+360).*": ("xbox", "Microsoft Xbox"),
