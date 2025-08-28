@@ -112,6 +112,7 @@ class GracefulShutdownHandler:
         
         if self.force_count == 1:
             print("\n\n⚠️  Graceful shutdown initiated (press Ctrl+C again to force quit)...")
+            print("   Finishing current files, please wait...")
             
             # Set shutdown event for all threads
             self.shutdown_event.set()
@@ -119,23 +120,9 @@ class GracefulShutdownHandler:
             # Save current progress
             self.save_progress_state()
             
-            # Shutdown executor with timeout
-            if self.executor:
-                print("   Waiting for threads to complete...")
-                try:
-                    self.executor.shutdown(wait=True, timeout=5.0)
-                except:
-                    # Force shutdown if timeout
-                    self.executor.shutdown(wait=False)
-            
-            # Clean up temp files
-            self.cleanup_temp_files()
-            
-            if FEATURES['enable_progress_save']:
-                print("✅ Shutdown complete. Progress saved to .processing_state/resume_state.json")
-            else:
-                print("✅ Shutdown complete.")
-            sys.exit(0)
+            # Don't shutdown executor here - let threads finish gracefully
+            # The main processing loop will handle cleanup
+            return  # Return to allow graceful completion
         else:
             print("\n❌ Force quit requested. Terminating immediately...")
             sys.exit(1)
@@ -1602,11 +1589,12 @@ def count_files_in_directory(target_dir: Path) -> int:
 class AsyncFileCopyEngine:
     """Adaptive file copying engine that automatically optimizes for filesystem type"""
     
-    def __init__(self, operations_logger, errors_logger, progress_logger, dry_run=False):
+    def __init__(self, operations_logger, errors_logger, progress_logger, dry_run=False, shutdown_handler=None):
         self.operations_logger = operations_logger
         self.errors_logger = errors_logger
         self.progress_logger = progress_logger
         self.dry_run = dry_run
+        self.shutdown_handler = shutdown_handler
         
         # Environment detection
         self.is_wsl2 = self._detect_wsl2()
@@ -1934,7 +1922,15 @@ class AsyncFileCopyEngine:
             
             self.operations_logger.info(f"Processing folder: {folder_path} with {len(folder_files)} files")
             
+            file_count = 0
             for file_info in folder_files:
+                # Check for shutdown every 10 files
+                if file_count % 10 == 0:
+                    if self.shutdown_handler and self.shutdown_handler.check_shutdown():
+                        self.operations_logger.info(f"Shutdown requested, stopping folder processing at file {file_count}")
+                        break
+                
+                file_count += 1
                 try:
                     # Handle dict structure from _group_files_by_folder
                     if isinstance(file_info, dict):
@@ -2023,6 +2019,16 @@ class AsyncFileCopyEngine:
             # Wait for completion and handle any exceptions
             for future in as_completed(future_to_folder):
                 folder_path = future_to_folder[future]
+                
+                # Check for shutdown after each folder completes
+                if self.shutdown_handler and self.shutdown_handler.check_shutdown():
+                    self.operations_logger.info("Shutdown requested, canceling remaining folder processing")
+                    # Cancel remaining futures
+                    for remaining_future in future_to_folder:
+                        if not remaining_future.done():
+                            remaining_future.cancel()
+                    break
+                
                 try:
                     future.result()  # This will raise any exception that occurred
                 except Exception as e:
@@ -2898,7 +2904,8 @@ class EnhancedROMOrganizer:
             self.comprehensive_logger.get_logger('operations'),
             self.comprehensive_logger.get_logger('errors'),
             self.comprehensive_logger.get_logger('progress'),
-            dry_run
+            dry_run,
+            shutdown_handler
         )
         
         
@@ -3308,6 +3315,12 @@ class EnhancedROMOrganizer:
             files_by_folder, platforms, self.target_dir, progress_callback
         )
         processing_time = (datetime.now() - processing_start).total_seconds()
+        
+        # Check if shutdown was requested during processing
+        if shutdown_handler.check_shutdown():
+            print(f"\n⚠️  Processing stopped due to shutdown request.")
+            print(f"📊 Partial results: {processing_stats.files_copied} files copied before shutdown")
+            # Continue with cleanup and summary, but note the early exit
         
         # Update main stats (AsyncFileCopyEngine returns simplified stats)
         self.stats.files_found = len(all_files)
