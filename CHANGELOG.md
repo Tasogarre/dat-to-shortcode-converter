@@ -3,6 +3,44 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.1] - 2025-08-28
+
+### Fixed
+- **Display Timing**: Fixed excluded platform count showing 29 vs 30 during analysis by moving progress display after categorization completes
+- **Windows File Locking**: Enhanced retry logic with platform-specific delays (Windows: 0.2s, 0.5s, 1.0s) and doubled delays for file locking errors
+
+### Technical Improvements  
+- **Progress Display Accuracy**: Real-time analysis counts now accurately reflect categorization status
+- **File Lock Handling**: Automatic detection and extended retry delays for Windows "[WinError 32] file being used by another process" errors
+- **Cross-platform Optimization**: Different retry strategies for Windows vs Unix-like systems
+
+### Known Issues
+- **File Count Discrepancy**: 178 files still missing (64,142 expected vs 63,964 found) despite improved error tracking - investigation ongoing
+- **Error Count Display**: Terminal shows "0 errors" despite log evidence of 168 file locking errors - requires error counting architecture review
+
+## [0.12.0] - 2025-08-28
+
+### Fixed
+- **CRITICAL: Silent Copy Failures** - Enhanced exception handling to catch all file operation failures that were causing 130+ files to be lost without being logged as errors
+- **File Count Discrepancies** - Fixed comprehensive error tracking and counting to eliminate discrepancies between expected and actual file counts  
+- **Folder Creation Counter** - Fixed folders created statistic that was showing 0 despite creating 54+ platform directories
+- **PSP Platform Detection** - Added post-preprocessing pattern to correctly detect "Unofficial PlayStation Portable" variants (PSN/PSX2PSP)
+
+### Added
+- **Enhanced Good Tools Support** - Added 11 missing Good tool platform mappings: COCO, GBX, GEN, LYNX, MSX1, MSX2, NGPX, SV, VBOY, VECT, WSX
+- **Critical Exception Tracking** - All copy operations now wrapped in comprehensive try-catch blocks with detailed logging
+- **File Flow Breakdown** - Added clear file accounting section showing: Files Found → Identical (skipped) → Failed → Net Processed
+- **Thread Error Enhancement** - Enhanced thread exception logging with full tracebacks for debugging
+
+### Changed
+- **Error Tracking Reliability** - No more silent failures; all copy errors are now tracked and reported with detailed logging
+- **Terminal Output Clarity** - Simplified counting display with clear file flow breakdown for better user understanding
+
+### Technical Improvements
+- **Exception Handling** - Comprehensive error catching in all file operations prevents silent failures
+- **Statistics Accuracy** - All counts now reconcile correctly: discovered files = identical + failed + processed
+- **Enhanced Logging** - Critical errors include full exception details and file paths for debugging
+
 ## [0.11.2] - 2025-08-28
 
 ### Added
