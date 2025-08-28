@@ -217,6 +217,48 @@ This systematic approach prevents:
 - Loss of critical technical context between sessions
 - Incomplete understanding of past decisions and solutions
 
+### Pattern Matching Development - CRITICAL GUIDANCE
+
+**MANDATORY**: Always create local issue files when encountering pattern matching bugs:
+
+#### Pattern Order Hierarchy
+Platform patterns in `PLATFORM_MAPPINGS` are evaluated in dictionary insertion order (Python 3.7+). **Earlier patterns take precedence over later patterns**.
+
+**Critical Rules**:
+1. **Specific patterns BEFORE general patterns**: `MSX2` must come before `MSX(?!2)`
+2. **Test patterns incrementally**: Add one pattern at a time to identify conflicts
+3. **Use debug mode**: `--debug-analysis` shows which patterns match/fail
+4. **Negative lookaheads are dangerous**: Exclusion patterns like `(?!2)` can block intended matches
+
+#### Common Pattern Matching Pitfalls
+1. **Regex Escaping Errors**: 
+   - ❌ `\(PSN\)` won't match literal parentheses `(PSN)`
+   - ✅ `.*PSN.*` matches flexibly regardless of punctuation
+2. **Order Conflicts**: 
+   - ❌ Adding specific patterns AFTER general exclusion patterns
+   - ✅ Place specific patterns BEFORE broader patterns that might exclude them
+3. **Over-Precise Matching**:
+   - ❌ `(PSN)` requires exact match, fails on `(PSN) (Decrypted)`
+   - ✅ `.*PSN.*` handles variations in folder naming
+
+#### Pattern Development Workflow
+1. **Create issue file immediately** when patterns don't match as expected
+2. **Use debug analysis**: `python script.py --analyze-only --debug-analysis`
+3. **Test in isolation**: Verify pattern syntax with small tests
+4. **Check for conflicts**: Ensure new patterns don't break existing matches
+5. **Document in issue file**: Root cause, solution, and test validation
+
+**Example Issue Documentation**:
+```markdown
+# Pattern Matching Issue - [Platform] - Local Development Tracking
+**Problem**: Platform X not recognized despite pattern addition
+**Root Cause**: Pattern Y on line N excludes Platform X via negative lookahead
+**Solution**: Move Platform X pattern to line N-1 (before exclusion)
+**Test**: Verify Platform X maps correctly without breaking Platform Y
+```
+
+This guidance ensures pattern matching issues are resolved systematically and documented for future reference.
+
 ### Testing Strategy
 
 **Current state:** ✅ PRODUCTION READY - 100% comprehensive validation success rate

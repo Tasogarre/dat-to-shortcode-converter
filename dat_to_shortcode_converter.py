@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -395,10 +395,9 @@ PLATFORM_MAPPINGS = {
     r"^Nintendo Famicom & Entertainment System$": ("nes", "Nintendo Entertainment System"),
     
     # NEW: RetroArch-compatible platform additions (v0.11.0)
-    r"Microsoft.*MSX2.*": ("msx", "MSX2"),
     r"Nintendo.*Satellaview.*": ("satellaview", "Nintendo Satellaview"),
-    r"Unofficial.*PlayStation Portable \(PSN\).*": ("psp", "PlayStation Portable"),
-    r"Unofficial.*PlayStation Portable \(PSX2PSP\).*": ("psp", "PlayStation Portable"),
+    r"Unofficial.*PlayStation Portable.*PSN.*": ("psp", "PlayStation Portable"),
+    r"Unofficial.*PlayStation Portable.*PSX2PSP.*": ("psp", "PlayStation Portable"),
     r"Unofficial.*PlayStation Vita.*": ("psvita", "PlayStation Vita"),
     
     # Sega Systems - Keep genesis and megadrive separate as requested
@@ -477,6 +476,7 @@ PLATFORM_MAPPINGS = {
     r"3DO.*": ("3do", "3DO Interactive Multiplayer"),
     r"Amstrad.*CPC.*": ("amstradcpc", "Amstrad CPC"),
     r"Apple.*Apple II.*": ("apple2", "Apple II"),
+    r"Microsoft.*MSX2.*": ("msx", "MSX2"),  # Must come BEFORE MSX exclusion pattern
     r".*MSX(?!2).*": ("msx", "MSX"),
     r"Sinclair.*ZX Spectrum.*": ("zxspectrum", "ZX Spectrum"),
     r"Microsoft.*Xbox(?!\s+360).*": ("xbox", "Microsoft Xbox"),

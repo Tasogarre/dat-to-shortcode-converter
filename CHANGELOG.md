@@ -3,6 +3,33 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.11.1] - 2025-08-28
+
+### Fixed
+- **CRITICAL**: Fixed MSX2 platforms being blocked by MSX negative lookahead pattern
+- **CRITICAL**: Fixed PSP pattern regex escaping preventing matches with actual folder names
+- **Pattern Order**: Moved MSX2 pattern before MSX(?!2) exclusion pattern for proper precedence
+- **Regex Correction**: Replaced escaped parentheses with flexible keyword matching for PSP variants
+
+### Added
+- **Local Issue Documentation**: Created comprehensive local issue tracking for pattern matching bugs
+- **CLAUDE.md Pattern Matching Guidance**: Added critical guidance for pattern development and debugging
+- **Development Workflow**: Enhanced workflow requirements for systematic issue documentation
+
+### Technical Details
+- **MSX2 Fix**: Pattern `r"Microsoft.*MSX2.*"` moved to line 480 (before MSX exclusion on line 481)
+- **PSP Fix**: Changed `\(PSN\)` to `.*PSN.*` and `\(PSX2PSP\)` to `.*PSX2PSP.*` for flexible matching
+- **Pattern Recognition**: Now properly recognizes 4 previously unknown platforms:
+  - Microsoft - MSX2 (Parent-Clone) (Retool) → `msx`
+  - Microsoft - MSX2 (Retool) → `msx`
+  - Unofficial - Sony - PlayStation Portable (PSN) (Decrypted) (Retool) → `psp`
+  - Unofficial - Sony - PlayStation Portable (PSX2PSP) (Retool) → `psp`
+
+### Development Process Improvements
+- **Issue Documentation**: All pattern matching bugs now systematically documented in `.issues/`
+- **Session Continuity**: Local issue files ensure bug context persists across Claude sessions
+- **Pattern Development**: Added specific guidance for avoiding common regex and order conflicts
+
 ## [0.11.0] - 2025-08-28
 
 ### Added
