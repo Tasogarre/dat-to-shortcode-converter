@@ -2395,14 +2395,15 @@ class PlatformAnalyzer:
                 if debug_mode:
                     self.logger.debug(f"  [X] No platform match found")
             
-            # Update analysis progress display AFTER categorization is complete
+            # Update analysis progress display without intermediate counts
             if FEATURES['enhanced_terminal_display']:
-                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] - ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown", end='', flush=True)
+                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] directories...", end='', flush=True)
         
-        # Console progress feedback
+        # Console progress feedback with final counts
         if FEATURES['enhanced_terminal_display']:
             print()  # Clear the progress line
         print(f"✅ Analysis complete: {directories_with_roms} directories with ROM files, {len(platforms)} platforms identified")
+        print(f"📊 Platform Summary: ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown")
         if directories_skipped_roms > 0 or directories_skipped_target > 0:
             empty_note = " (including root source directory)" if directories_skipped_roms == 1 else ""
             print(f"📊 Filtered: {directories_skipped_roms} empty dirs{empty_note}, {directories_skipped_target} target dirs skipped")
