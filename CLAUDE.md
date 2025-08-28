@@ -68,7 +68,15 @@ BEFORE making changes that affect project workflow:
 
 ## ✅ RECENT CRITICAL FIXES - August 2025
 
-### **LATEST STATUS**
+### **LATEST STATUS (v0.12.0-v0.12.1)**
+- ✅ **Silent Copy Failures**: Fixed 130+ missing files with comprehensive exception handling
+- ✅ **Good Tools Support**: Added 11 missing platform mappings (33 total platforms)
+- ✅ **PSP Platform Detection**: Fixed unofficial PSN/PSX2PSP variant recognition
+- ✅ **Display Timing**: Fixed excluded platform count display accuracy (29 vs 30 issue)
+- ✅ **Windows File Locking**: Enhanced retry logic with exponential backoff for file lock errors
+- ⚠️  **File Count Discrepancy**: 178 files still missing despite improved error tracking (under investigation)
+
+### **PREVIOUS FIXES**
 - ✅ **Platform Expansion**: RetroArch compatibility (52→58 platforms, 97.5% accuracy)
 - ✅ **File Count Bug**: Fixed double-counting statistics error 
 - ✅ **Duplicate Files**: Smart deduplication prevents data loss
@@ -931,12 +939,31 @@ Before committing:
 ---
 
 ## 🎯 Current Context - Updated 2025-08-28
-**Focus**: Context engineering optimization & token efficiency
-**Blockers**: None - actively implementing best practices from research
-**Next**: Test optimized structure, create pattern templates
-**Version**: v0.12.0 (context engineering update)
+**Focus**: Final bug resolution & repository maintenance for v0.12.1
+**Blockers**: File count discrepancy investigation (178 missing files)
+**Next**: Commit individual fixes, investigate Windows file locking impact
+**Version**: v0.12.1 (display timing and file locking fixes)
 
 ## 🧠 Active Patterns Registry
+
+### **Exception Handling in Concurrent Operations** - Discovered 2025-08-28
+**Context**: Multi-threaded file operations with ThreadPoolExecutor
+**Solution**: Wrap ALL copy operations in comprehensive try-catch blocks, not just the main logic
+**Validation**: Check logs for "CRITICAL: Copy operation exception" entries
+**Last Applied**: v0.12.0 silent copy failures fix
+
+### **Windows File Locking Retry Strategy** - Discovered 2025-08-28  
+**Context**: Windows antivirus/indexing causing [WinError 32] file access errors
+**Solution**: Platform-specific delays (Windows: 0.2s, 0.5s, 1.0s) with doubled delays for file locking
+**Validation**: Check operations log for "Windows file locking detected, extending retry delay" messages
+**Last Applied**: v0.12.1 Windows file locking improvements
+
+### **Progress Display Timing** - Discovered 2025-08-28
+**Context**: Real-time progress displays in loops with complex processing
+**Solution**: Show progress counts AFTER processing completes, not at loop start
+**Validation**: Verify displayed counts match final counts throughout processing
+**Last Applied**: v0.12.1 excluded platform count display fix
+
 - **Context Engineering**: Lean navigation docs, reference not paste
 - **Pattern Debugging**: Investigate preprocessing pipeline first
 - **Self-Enforcing Docs**: Mandatory update protocols in CLAUDE.md
