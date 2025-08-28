@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.11.2"
+__version__ = "0.12.1"
 VERSION_DATE = "2025-08-28"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -398,6 +398,7 @@ PLATFORM_MAPPINGS = {
     r"Nintendo.*Satellaview.*": ("satellaview", "Nintendo Satellaview"),
     r"Unofficial.*PlayStation Portable.*PSN.*": ("psp", "PlayStation Portable"),
     r"Unofficial.*PlayStation Portable.*PSX2PSP.*": ("psp", "PlayStation Portable"),
+    r"^Unofficial - Sony - PlayStation Portable$": ("psp", "PlayStation Portable"),  # Post-preprocessing pattern
     r"Unofficial.*PlayStation Vita.*": ("psvita", "PlayStation Vita"),
     
     # Sega Systems - Keep genesis and megadrive separate as requested
@@ -1096,8 +1097,13 @@ def copy_file_with_verification(source_path: Path, target_path: Path, operations
 def copy_file_with_retry(source_path: Path, target_path: Path, operations_logger=None, max_retries: int = 3) -> tuple[bool, str]:
     """Copy file with retry logic and CRC verification"""
     import time
+    import platform
     
-    delays = [0.1, 0.3, 0.7]  # Exponential backoff
+    # Enhanced delays for Windows file locking issues
+    if platform.system() == 'Windows':
+        delays = [0.2, 0.5, 1.0]  # Longer delays for Windows file locking
+    else:
+        delays = [0.1, 0.3, 0.7]  # Standard delays for other systems
     
     for attempt in range(max_retries):
         success, info = copy_file_with_verification(source_path, target_path, operations_logger)
@@ -1111,9 +1117,16 @@ def copy_file_with_retry(source_path: Path, target_path: Path, operations_logger
         if operations_logger:
             operations_logger.warning(f"Copy attempt {attempt + 1}/{max_retries} failed: {source_path.name} - {info}")
             
-        # Retry with exponential backoff
+        # Retry with exponential backoff, extra delay for Windows file locking
         if attempt < max_retries - 1:
             delay = delays[min(attempt, len(delays) - 1)]
+            
+            # Extra delay for Windows file locking errors
+            if "being used by another process" in info:
+                delay *= 2  # Double delay for file locking issues
+                if operations_logger:
+                    operations_logger.debug(f"Windows file locking detected, extending retry delay to {delay}s")
+            
             time.sleep(delay)
     
     # All attempts failed
@@ -1879,40 +1892,48 @@ class PerformanceOptimizedROMProcessor:
                                 return
                             
                             # Use improved atomic copy method with proper timing
-                            success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
-                            if error_msg and "identical" in error_msg:
-                                folder_skipped += 1
-                                success = False  # Don't count as copied
-                            elif error_msg and "replaced" in error_msg:
-                                folder_replaced += 1
-                                success = True
-                            
-                            if success:
-                                # Track folder creation
-                                folder_dir_str = str(target_file_path.parent)
-                                if folder_dir_str not in stats.folders_created:
-                                    stats.folders_created.add(folder_dir_str)
+                            try:
+                                success, error_msg = copy_file_atomic(source_path, target_file_path, self.operations_logger)
                                 
-                                # Count based on rename status - FIXED: Don't double-count renamed files
-                                if rename_reason and rename_reason.startswith("renamed_"):
-                                    # This is a renamed duplicate, already counted in folder_renamed - don't double-count
-                                    pass  # Renamed files already counted at line 1313, don't count again as copied
-                                elif reason == "new_file":
-                                    folder_copied += 1
-                                else:
+                                # Handle special error messages
+                                if error_msg and "identical" in error_msg:
+                                    folder_skipped += 1
+                                    success = False  # Don't count as copied
+                                elif error_msg and "replaced" in error_msg:
                                     folder_replaced += 1
-                                self.operations_logger.debug(f"Successfully copied: {source_path.name}")
-                                # Log file size for verification
-                                try:
-                                    target_size = target_file_path.stat().st_size
-                                    self.operations_logger.debug(f"Copy verified: {target_size:,} bytes written")
-                                except Exception:
-                                    pass
-                            else:
+                                    success = True
+                                
+                                if success:
+                                    # Track folder creation
+                                    folder_dir_str = str(target_file_path.parent)
+                                    if folder_dir_str not in stats.folders_created:
+                                        stats.folders_created.add(folder_dir_str)
+                                    
+                                    # Count based on rename status - FIXED: Don't double-count renamed files
+                                    if rename_reason and rename_reason.startswith("renamed_"):
+                                        # This is a renamed duplicate, already counted in folder_renamed - don't double-count
+                                        pass  # Renamed files already counted at line 1313, don't count again as copied
+                                    elif reason == "new_file":
+                                        folder_copied += 1
+                                    else:
+                                        folder_replaced += 1
+                                    self.operations_logger.debug(f"Successfully copied: {source_path.name}")
+                                    # Log file size for verification
+                                    try:
+                                        target_size = target_file_path.stat().st_size
+                                        self.operations_logger.debug(f"Copy verified: {target_size:,} bytes written")
+                                    except Exception:
+                                        pass
+                                else:
+                                    folder_errors += 1
+                                    self.logger_errors.error(f"Failed to copy {source_path.name}: {error_msg}")
+                                    # Log detailed failure for debugging
+                                    self.logger_errors.debug(f"Copy failure: {source_path} -> {target_file_path}")
+                            except Exception as copy_exception:
+                                # Critical: Catch ALL copy operation exceptions
                                 folder_errors += 1
-                                self.logger_errors.error(f"Failed to copy {source_path.name}: {error_msg}")
-                                # Log detailed failure for debugging
-                                self.logger_errors.debug(f"Copy failure: {source_path} -> {target_file_path}")
+                                self.logger_errors.error(f"CRITICAL: Copy operation exception for {source_path.name}: {str(copy_exception)}")
+                                self.logger_errors.debug(f"Copy exception details: {source_path} -> {target_file_path}")
                         else:
                             # File is identical, skip it
                             folder_skipped += 1
@@ -1971,7 +1992,10 @@ class PerformanceOptimizedROMProcessor:
                 except Exception as e:
                     with progress_lock:
                         errors += 1
-                    self.logger_errors.error(f"Thread error: {str(e)}")
+                    self.logger_errors.error(f"CRITICAL THREAD ERROR: {str(e)}")
+                    # Log full traceback for debugging
+                    import traceback
+                    self.logger_errors.error(f"Thread error traceback: {traceback.format_exc()}")
         
         # Final progress display with newline
         display_unified_progress(
@@ -1985,12 +2009,13 @@ class PerformanceOptimizedROMProcessor:
         print(f"\n✅ Multi-threaded processing complete: {files_processed:,} files processed")
         print(f"   📋 Results: {files_copied:,} copied, {files_replaced:,} replaced, {files_renamed:,} renamed, {files_skipped:,} skipped, {errors:,} errors")
         
-        # Update stats
+        # Update stats (including folders_created from the internal stats object)
         stats.files_copied = files_copied
         stats.files_replaced = files_replaced
         stats.files_renamed_duplicates = files_renamed
         stats.files_skipped_duplicate = files_skipped
         stats.errors = errors
+        # Note: stats.folders_created should already be populated within process_folder_files
         
         # Log final statistics
         elapsed_time = time.perf_counter() - start_time
@@ -2521,10 +2546,6 @@ class PlatformAnalyzer:
         for idx, platform_dir in enumerate(top_level_dirs):
             directories_processed += 1
             
-            # Update analysis progress display
-            if FEATURES['enhanced_terminal_display']:
-                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] - ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown", end='', flush=True)
-            
             if debug_mode:
                 self.logger.debug(f"Processing top-level directory: {platform_dir}")
             
@@ -2616,6 +2637,10 @@ class PlatformAnalyzer:
                 progress_display.stats['unknown'] = len(unknown)
                 if debug_mode:
                     self.logger.debug(f"  [X] No platform match found")
+            
+            # Update analysis progress display AFTER categorization is complete
+            if FEATURES['enhanced_terminal_display']:
+                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] - ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown", end='', flush=True)
         
         # Console progress feedback
         if FEATURES['enhanced_terminal_display']:
@@ -3595,6 +3620,12 @@ class EnhancedROMOrganizer:
             f"  🎯 Total Unique Files: {self.stats.total_unique_files:,}",
             f"  📂 Folders Created: {len(self.stats.folders_created) if hasattr(self.stats, 'folders_created') else 'N/A'}",
             f"  ❌ Errors: {self.stats.errors:,}",
+            "",
+            "📊 FILE FLOW BREAKDOWN:",
+            f"  📁 Files Found: {self.stats.files_found:,}",
+            f"  ➖ Identical Files: {self.stats.files_skipped_duplicate:,} (skipped)",
+            f"  ➖ Failed Copies: {self.stats.errors:,} (logged as errors)",
+            f"  ✅ Net Files Processed: {self.stats.files_copied + self.stats.files_renamed_duplicates:,} (copied + renamed)",
             "",
             "🎮 SELECTED PLATFORMS:",
         ]
