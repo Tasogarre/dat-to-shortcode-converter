@@ -3,6 +3,22 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.5] - 2025-08-29
+
+### Fixed
+- **CRITICAL: AttributeError after successful processing** - Fixed 'EnhancedROMOrganizer' object has no attribute 'logger' error that occurred after all files were successfully processed
+- **Enhanced debugging** - Added full traceback output for fatal errors to improve debugging visibility
+
+### Technical Improvements
+- **Logger attribute correction** - Changed incorrect `self.logger` reference to proper `self.logger_ops` in file validation code (line 3370)
+- **Better exception handling** - Fatal errors now show complete stack trace to help identify root causes
+- **Validation completion** - File count validation now completes properly without causing crashes
+
+### Previous Issues Resolved
+- Script no longer crashes after successfully processing all files
+- Validation messages display correctly in operations log
+- Processing completion statistics are fully displayed
+
 ## [0.12.4] - 2025-08-28
 
 ### Fixed

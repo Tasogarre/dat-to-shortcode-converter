@@ -36,8 +36,8 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.4"
-VERSION_DATE = "2025-08-28"
+__version__ = "0.12.5"
+VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
 # Feature flags for experimental features (solopreneur rapid prototyping)
@@ -3363,11 +3363,11 @@ class EnhancedROMOrganizer:
             )
             
             if discrepancies:
-                self.logger.warning(f"File count validation detected {len(discrepancies)} issues")
+                self.logger_ops.warning(f"File count validation detected {len(discrepancies)} issues")
                 for discrepancy in discrepancies:
-                    self.logger.warning(f"VALIDATION: {discrepancy}")
+                    self.logger_ops.warning(f"VALIDATION: {discrepancy}")
             else:
-                self.logger.info(f"File count validation passed: {actual_count} files confirmed")
+                self.logger_ops.info(f"File count validation passed: {actual_count} files confirmed")
         
         # Update display stats with processing results
         progress_display.stats.update({
@@ -3818,6 +3818,8 @@ Features:
         sys.exit(1)
     except Exception as e:
         print(f"💥 Fatal error: {e}")
+        print("\n🔍 Debug traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 def test_regional_preferences():
