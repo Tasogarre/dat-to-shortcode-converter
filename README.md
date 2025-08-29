@@ -5,7 +5,7 @@ Convert ROM collections from DAT naming conventions (No-Intro, TOSEC, GoodTools,
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.4-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.12.9-blue)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/status-production--ready-green)](CHANGELOG.md)
 
 ## 🎯 What This Tool Does
@@ -41,124 +41,55 @@ Your support helps maintain and improve this tool for the retrogaming community.
 
 ## ✨ Key Features
 
-### 🚀 **Industry-Leading Coverage**
-- **97.5% platform detection accuracy** - Successfully processed 55,898+ ROM files with optimized accuracy
-- **58 supported platforms** - Complete RetroArch compatibility with comprehensive platform support
-- **Enhanced Good Tools support** - 30+ Good tool platform codes with improved pattern matching
-- **Specialized tool support** - Good tools, MAME, FinalBurn Neo with advanced preprocessing
-- **Production debugging** - Complete visibility into platform detection with real-time feedback
-- **Smart categorization** - Clear distinction between supported vs excluded platforms with detailed explanations
-
-### ⚡ **High-Performance Processing**
-- **Real-time progress feedback** - Live progress bars with file names, completion %, time remaining, and processing speed
-- **Lightning-fast performance** - Process thousands of files in seconds (Windows/Linux native)
-- **Memory-efficient hashing** - Memory-mapped SHA1 for files >10MB
-- **Optimized for large collections** - Handles 50,000+ ROM files efficiently
-- **Comprehensive monitoring** - Detailed logs and performance metrics
-- **Robust error recovery** - Progressive backoff and file skipping for problematic files
-
-### 🎮 **Smart Platform Handling**
-- **58 supported platforms** - All major EmulationStation systems plus RetroArch-compatible additions
-- **Enhanced platform support** - Comprehensive gaming systems with enhanced variants
-- **Format-specific organization** - N64 BigEndian/ByteSwapped subfolders
-- **NDS encryption handling** - Separate encrypted/decrypted subfolders
-- **Intelligent consolidation** - Merges firmware/games/applications folders
-- **Clear exclusion reasons** - Firmware and unsupported platforms properly categorized
-
-### 🔧 **Advanced Pattern Matching**
-- **Three-tier matching system** - Specialized → Preprocessed → Standard patterns
-- **Regional consolidation** - Smart Famicom/NES and Super Famicom/SNES merging
-- **Good tools integration** - Direct support for 22 Good tool platform codes
-- **MAME/FinalBurn support** - Specialized handlers for arcade collections
-- **Arcade system support** - Atomiswave, Cannonball (OutRun Engine), and more
-- **Comprehensive ROM format support** - 70+ file extensions from research-based database
+- **Industry-leading accuracy** - 97.5% platform detection across 58+ systems including all major EmulationStation platforms
+- **High-performance processing** - Process thousands of files with real-time progress, memory-efficient hashing, and robust error recovery
+- **Smart format handling** - Format-specific subfolders (N64 BigEndian/ByteSwapped, NDS encrypted/decrypted), duplicate prevention with SHA1 verification
+- **Advanced pattern matching** - Three-tier system with specialized Good Tools, MAME, and FinalBurn Neo support
 
 ## 🎮 Supported Platforms
 
-### Nintendo Systems
-- **NES/Famicom** → `nes`
-- **SNES/Super Famicom** → `snes`
-- **Game Boy/Color/Advance** → `gb`, `gbc`, `gba`
-- **Nintendo 64** → `n64` (with format subfolders)
-- **GameCube** → `gc`
-- **Wii/Wii U** → `wii`, `wiiu`
-- **DS/3DS** → `nds`, `n3ds` (with encryption subfolders)
-- **Virtual Boy** → `virtualboy`
+**Nintendo**: NES, SNES, Game Boy/Color/Advance, N64, GameCube, Wii/U, DS/3DS, Virtual Boy  
+**Sega**: Master System, Genesis/Mega Drive, Game Gear, Saturn, Dreamcast  
+**Sony**: PlayStation 1-4, PSP, PS Vita  
+**Atari**: 2600, 5200, 7800, Lynx, 800  
+**Arcade**: MAME, Neo Geo/CD, Atomiswave, FinalBurn Neo  
+**Classic Computers**: Amiga, C64, MSX, PC  
+**Other**: 3DO, PC Engine, WonderSwan, Vectrex, and 30+ more systems
 
-### Sega Systems
-- **Master System** → `mastersystem`
-- **Genesis/Mega Drive** → `genesis`, `megadrive`
-- **Game Gear** → `gamegear`
-- **Saturn/Dreamcast** → `saturn`, `dreamcast`
+*Plus specialized support for Good Tools collections (33 platform codes) and format-specific subfolders for N64 and NDS*
 
-### Sony Systems
-- **PlayStation 1-4** → `psx`, `ps2`, `ps3`, `ps4`
-- **PSP/PS Vita** → `psp`, `psvita`
+## 📦 Quick Start
 
-### Other Systems
-- **Atari systems** → `atari2600`, `atari5200`, `atari7800`, `atarilynx`, `atari800`
-- **Arcade** → `arcade`, `neogeo`, `neogeocd`, `atomiswave`
-- **PC Engine** → `pcengine`, `supergrafx`
-- **Classic Computers** → `amiga`, `c64`, `pc`, `msx`
-- **Handhelds** → `wonderswan`, `wonderswancolor`, `supervision`, `pokemini`, `atarilynx`, `ngp`, `ngpc`
-- **Special Emulators** → `cannonball` (OutRun Engine)
-- **Obscure Systems** → `3do`, `coleco`, `intellivision`, `vectrex`, `odyssey2`, `supervision`
+**Requirements**: Python 3.7+ on Windows, Linux, or macOS
 
-### Specialized Collection Support
-- **Good Tools** → All 33 platform codes (GoodNES, GoodN64, GoodLynx, GoodCoCo, GoodGen, GoodGBx, etc.)
-- **MAME Collections** → Complete MAME ROM sets
-- **FinalBurn Neo** → Platform-specific arcade collections
-
-## 📦 Installation
-
-### Requirements
-- **Python 3.7+** (uses only standard library)
-- **Operating System**: Windows, Linux, or macOS
-  - **Note**: WSL2 compatibility issues with large collections - run from Windows directly if using WSL2
-- **Disk space**: Sufficient for ROM collection duplication
-
-### Download
 ```bash
-# Clone the repository (recommended - includes all required files)
+# 1. Download
 git clone https://github.com/Tasogarre/dat-to-shortcode-converter.git
 cd dat-to-shortcode-converter
 
-# Or download all required files:
-# - dat_to_shortcode_converter.py (main script)
-# - good_pattern_handler.py (pattern matching)
-# - subcategory_handler.py (folder processing)
-```
-
-### Verify Installation
-```bash
-# Test the installation
+# 2. Verify installation
 python dat_to_shortcode_converter.py --help
-```
 
-## 🚀 Usage
-
-### 1. 📊 Analysis Mode (Recommended First Step)
-```bash
-# Analyze your collection without making changes
+# 3. Analyze your collection first
 python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output" --analyze-only
 ```
 
-### 2. 🧪 Dry Run Mode (Preview Operations)
-```bash
-# Preview what would happen
-python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output" --dry-run
-```
+⚠️ **WSL2 Users**: Run from Windows directly - WSL2 has known I/O issues with large collections on Windows drives
 
-### 3. 🎮 Interactive Mode (Recommended)
+## 🚀 Common Usage
+
 ```bash
-# Full interactive processing
+# Interactive mode (recommended) - choose which platforms to process
 python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output"
-```
 
-### 4. ⚡ Batch Mode (Process All)
-```bash
-# Process all supported platforms automatically
+# Process all platforms automatically  
 python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output" --no-interactive
+
+# Preview without changes
+python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output" --dry-run
+
+# Debug platform detection issues
+python dat_to_shortcode_converter.py "/path/to/dat/roms" "/path/to/output" --analyze-only --debug-analysis
 ```
 
 ## 🎯 Interactive Selection Example
@@ -221,155 +152,52 @@ output/
         └── Brain Age.nds
 ```
 
-## ⚡ Performance Metrics
+## ⚡ Performance
 
-For large collections, expect real-world performance:
+Expect ~65 files/second for typical collections. Large collections (50,000+ files) process in 10-20 minutes with real-time progress tracking.
 
-| Collection Size | Processing Time | Files/Second |
-|----------------|-----------------|-------------|
-| 1,000 files    | ~15 seconds     | ~65/sec     |
-| 10,000 files   | ~2.5 minutes    | ~65/sec     |
-| 50,000 files   | ~13 minutes     | ~65/sec     |
-| 70,000 files   | ~18 minutes     | ~65/sec     |
+*Performance varies based on file size, storage type, and antivirus software*
 
-**Key Performance Features:**
-- **Real-time progress bars** - Live updates during processing
-- **Concurrent I/O operations** - Multi-threaded file processing
-- **Thread-safe progress tracking** - Updates every 100 files
-- **Memory-efficient processing** - Optimized for large collections
-- **Windows Defender compatible** - Adaptive delays for antivirus scanning
+## 📋 Logs and Debugging
 
-*Performance varies based on file size, antivirus software, and storage type*
-
-## 📋 Logging Output
-
-The converter generates comprehensive logs in the `logs/` directory:
-
-- **`operations_*.log`** - All file operations and decisions
-- **`analysis_*.log`** - Platform detection and categorization
-- **`progress_*.log`** - Real-time processing updates
-- **`errors_*.log`** - Errors and exceptions
-- **`summary_*.log`** - Final statistics and performance metrics
-- **`performance_*.log`** - Detailed performance analysis
+Comprehensive logs are saved to `logs/` directory for troubleshooting platform detection and file operations.
 
 ## 🔧 Advanced Options
 
-```bash
-# Full command line interface
-python dat_to_shortcode_converter.py [SOURCE] [TARGET] [OPTIONS]
+**Key Options:**
+- `--analyze-only` - Show platform analysis without processing
+- `--dry-run` - Preview operations without copying files  
+- `--no-interactive` - Process all platforms automatically
+- `--regional-mode regional` - Keep regional variants separate (Famicom/NES)
+- `--debug-analysis` - Enhanced debugging for troubleshooting
 
-Options:
-  --analyze-only                   Show analysis results and exit
-  --dry-run                       Preview operations without copying files
-  --no-interactive               Process all platforms without user selection
-  --regional-mode {consolidated,regional}  Regional variant handling mode
-  --disable-subcategory-processing  Disable subcategory consolidation
-  --subcategory-stats            Show detailed subcategory processing statistics
-  --debug-analysis               Enhanced debugging output for platform detection
-  --include-empty-dirs           Include empty directories in analysis reports
-  -h, --help                     Show help message
-
-Examples:
-  # Analysis with specialized pattern detection
-  python dat_to_shortcode_converter.py "source" "target" --analyze-only
-  
-  # Regional mode (keep Famicom/NES separate)
-  python dat_to_shortcode_converter.py "source" "target" --regional-mode regional
-  
-  # Detailed analysis for troubleshooting platform detection
-  python dat_to_shortcode_converter.py "source" "target" --analyze-only --debug-analysis --include-empty-dirs
-  
-  # Disable preprocessing for compatibility testing
-  python dat_to_shortcode_converter.py "source" "target" --disable-subcategory-processing
-```
+Run `python dat_to_shortcode_converter.py --help` for all options.
 
 ## ❓ Troubleshooting
 
 ### Common Issues
 
-**"No platforms found"**
-- Verify ROM files are in DAT-named folders
-- Check that ROM files have recognized extensions (.nes, .zip, etc.)
-- Run with `--analyze-only --debug-analysis` for detailed platform detection analysis
-- Ensure source directory isn't the same as target directory (creates detection loop)
+**"No platforms found"** - Verify ROM files are in DAT-named folders with recognized extensions (.nes, .zip, etc.). Run with `--analyze-only --debug-analysis` for detailed analysis.
 
-**"Permission denied" errors**
-- Ensure target directory is writable
-- Close any running emulators or ROM managers
-- Check file permissions on source ROMs
+**"Permission denied"** - Ensure target directory is writable and close any running emulators or ROM managers.
 
-**WSL2 Large Collection Compatibility**
-- **Issue**: Script experiences high I/O error rates (up to 54% failure) when processing ROM collections on WSL2 Windows mounts (`/mnt/*`)
-- **Root Cause**: WSL2's 9p protocol has fundamental limitations with concurrent file operations on Windows drives
-- **Solution**: Run script directly from Windows Command Prompt/PowerShell instead of WSL2
-- **Impact**: All WSL2 users accessing Windows drives via `/mnt/` paths - affects collections of any size
-- **Status**: This is a known limitation of WSL2's filesystem protocol, not a script bug
+**WSL2 Compatibility** - Script experiences high I/O error rates on WSL2 Windows mounts (`/mnt/*`) due to 9p protocol limitations. Use Windows Command Prompt/PowerShell instead.
 
-**Files copied as 0-bytes or copying failures**
-- **Status**: ✅ **Resolved** - Enhanced atomic copy operations with comprehensive error recovery
-- Enhanced retry logic with progressive backoff prevents transient failures
-- Detailed error logging helps identify specific problematic files
-
-**Slow performance**
-- Use local drives instead of network storage
-- Exclude ROM directories from antivirus real-time scanning
-- Consider processing smaller batches for very large collections
-
-**"Empty directory detected" (but directory contains files)**
-- This message only refers to the root source directory being empty
-- If the source root contains no ROM files directly, this is expected behavior
-- Individual platform directories with ROM files are processed normally
+**Slow performance** - Use local drives, exclude ROM directories from antivirus scanning, or process smaller batches.
 
 ### Getting Help
-
-1. Check the generated log files in `logs/` directory
-2. Run with `--analyze-only --debug-analysis` to analyze platform detection in detail
-3. Use `--include-empty-dirs` to see analysis of all directories, including empty ones
-4. Test with a small subset of ROMs first
-5. [Open an issue](https://github.com/Tasogarre/dat-to-shortcode-converter/issues) with log files attached
+1. Check log files in `logs/` directory
+2. Run `--analyze-only --debug-analysis` for detailed platform detection
+3. [Open an issue](https://github.com/Tasogarre/dat-to-shortcode-converter/issues) with log files
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Adding Platform Support
-1. Add regex patterns to `PLATFORM_MAPPINGS` in `dat_to_shortcode_converter.py`
-2. Consider adding specialized patterns to `good_pattern_handler.py` if needed
-3. Add test cases to `test_phase2_patterns.py`
-4. Update platform coverage analysis with `analyze_enhanced_coverage.py`
-5. Submit a pull request with test results
-
-### Reporting Issues
-- Include log files from `logs/` directory
-- Specify your operating system and Python version
-- Provide examples of folder names that aren't working
-
-## ⚖️ Legal Notice
-
-This tool is designed for organizing ROM backups of games you legally own. Users are responsible for complying with their local copyright laws. Only use this tool with:
-- ROM files created from your own legitimately purchased games
-- Homebrew and public domain software
-- Games for which you own the original physical media
-
-The developers of this tool do not condone or support piracy. This tool does not include, distribute, or link to copyrighted ROM files.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. When reporting issues, include log files from `logs/` directory and examples of non-working folder names.
 
 ## ⚖️ License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details. This tool is for organizing legally owned ROM backups only.
 
 ## 🙏 Acknowledgments
 
-- **EmulationStation** and **RetroPie** communities for establishing shortcode standards
-- **No-Intro**, **TOSEC**, **GoodTools**, and **Redump** teams for ROM preservation
-- ROM management tools like **RomVault** and **igir** for inspiration
-- The broader retrogaming community for feedback and testing
-
----
-
-## 🎮 Ready to Convert Your Collection?
-
-1. **Start with analysis**: `python dat_to_shortcode_converter.py "source" "target" --analyze-only`
-2. **Try a dry run**: `python dat_to_shortcode_converter.py "source" "target" --dry-run`  
-3. **Process your ROMs**: `python dat_to_shortcode_converter.py "source" "target"`
-
-**Questions?** Check our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines or [open an issue](https://github.com/Tasogarre/dat-to-shortcode-converter/issues)!
+Thanks to the **EmulationStation**, **RetroPie**, **No-Intro**, **TOSEC**, **GoodTools**, and **Redump** communities for establishing standards and preserving gaming history.
