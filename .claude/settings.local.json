@@ -51,7 +51,10 @@
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
       "Bash(timeout:*)",
-      "Bash(claude upgrade)"
+      "Bash(claude upgrade)",
+      "WebFetch(domain:buymeacoffee.com)",
+      "mcp__tavily-remote__tavily_search",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": [],
