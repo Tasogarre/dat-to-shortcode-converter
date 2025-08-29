@@ -3,6 +3,11 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.7] - 2025-08-29
+
+### Improved
+- **Phase 2 Output**: Removed misleading estimated processing time display that couldn't account for system performance variations, I/O bottlenecks, or hardware differences
+
 ## [0.12.6] - 2025-08-29
 
 ### Fixed

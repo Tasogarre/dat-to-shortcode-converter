@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.6"
+__version__ = "0.12.7"
 VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1310,8 +1310,6 @@ class ModernTerminalDisplay:
         print(f"  • Platforms to process:            {platforms_to_process:,}")
         print(f"  • Files to process:            {self.stats['files_to_process']:,}")
         print(f"  • Folders to process:             {self.stats['directories_with_roms']:,}")
-        estimated_time = self.stats['files_to_process'] / 2500 if self.stats['files_to_process'] > 0 else 0
-        print(f"  • Estimated time:            ~{int(estimated_time)} sec @ 2,500 files/s")
         print()
         print("✗ Not Processing:")
         print(f"  • Excluded platform files:      {self.stats['files_excluded']:,} (will remain in source)")
@@ -1657,22 +1655,10 @@ class AsyncFileCopyEngine:
     
     def _select_strategy(self) -> dict:
         """Select appropriate copying strategy based on environment"""
-        if self.is_wsl2:
-            return {
-                'name': 'WSL2SingleThreadStrategy',
-                'max_workers': 1,  # Single-threaded for WSL2 Windows mounts
-                'retry_config': {
-                    'max_attempts': 2,
-                    'base_delay': 1.0,
-                    'exponential_base': 3.0,
-                    'jitter': True
-                },
-                'description': 'Single-threaded strategy optimized for WSL2 9p protocol limitations'
-            }
-        else:
-            return {
-                'name': 'HighConcurrencyStrategy', 
-                'max_workers': 8,
+        # Default to concurrent strategy - WSL2 check happens at runtime based on actual paths
+        return {
+            'name': 'HighConcurrencyStrategy', 
+            'max_workers': 8,
                 'retry_config': {
                     'max_attempts': 3,
                     'base_delay': 0.1,
@@ -1690,11 +1676,14 @@ class AsyncFileCopyEngine:
         self.operations_logger.info(f"Starting adaptive file copying with {self.strategy['name']}")
         self.operations_logger.debug(f"WSL2 DEBUG - Processing {len(files_by_folder)} folders with {self.max_workers} workers")
         
+        # Check if WSL2 with Windows mounts requires single-threaded processing
+        use_single_threaded = False
         if self.is_wsl2 and any(self._is_windows_mount(Path(folder)) for folder in files_by_folder.keys()):
             self.operations_logger.warning("WSL2 + Windows mount detected - Using single-threaded strategy to prevent I/O errors")
+            use_single_threaded = True
         
-        # Use single-threaded processing for WSL2 to avoid 9p protocol issues
-        if self.max_workers == 1:
+        # Route to appropriate processing method
+        if use_single_threaded:
             return self._process_single_threaded(files_by_folder, platforms, target_dir, update_progress_callback)
         else:
             return self._process_concurrent(files_by_folder, platforms, target_dir, update_progress_callback)
@@ -3065,7 +3054,8 @@ class EnhancedROMOrganizer:
             # Initialize modern terminal display
             mode = "DRY RUN" if self.dry_run else "LIVE RUN"
             regional_mode = "SEPARATE" if self.regional_mode == 'regional' else "CONSOLIDATED"
-            threads = getattr(self.args, 'threads', 4) if self.args else 4
+            # Get actual thread count from AsyncFileCopyEngine strategy
+            threads = self.async_copy_engine.max_workers
             
             # Show header with configuration
             progress_display.show_header(
