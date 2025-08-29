@@ -5,7 +5,7 @@ Convert ROM collections from DAT naming conventions (No-Intro, TOSEC, GoodTools,
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.9-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/status-production--ready-green)](CHANGELOG.md)
 
 ## 🎯 What This Tool Does
