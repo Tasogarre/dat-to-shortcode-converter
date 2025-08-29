@@ -1468,7 +1468,7 @@ class ModernTerminalDisplay:
         # Final validation check
         if self.stats['files_failed'] > 0:
             print("⚠️  WARNING: Some files failed to copy! Check errors log for details.")
-        elif completion_pct == 100.0:
+        elif success_pct == 100.0:
             print("🎉 SUCCESS: All files copied successfully with 100% integrity!")
         print("=" * 80)
 
