@@ -1,0 +1,532 @@
+2025-08-25 23:32:04 - INFO - AsyncFileCopyEngine initialized with HighConcurrencyStrategy strategy
+2025-08-25 23:32:04 - INFO - Platform: Windows, Thread workers: 2
+2025-08-25 23:32:04 - INFO - Windows environment detected - will use multi-threaded file operations
+2025-08-25 23:32:07 - INFO - System CPU cores: 16
+2025-08-25 23:32:07 - INFO - I/O worker threads: 2
+2025-08-25 23:32:07 - INFO - Hash chunk size: 65,536 bytes
+2025-08-25 23:32:23 - INFO - File discovery completed in 15.49 seconds
+2025-08-25 23:32:23 - INFO - Discovery rate: 3519.1 files/second
+2025-08-25 23:32:32 - INFO - Starting adaptive file copying with HighConcurrencyStrategy
+2025-08-25 23:32:32 - INFO - Using concurrent processing with 8 workers
+2025-08-25 23:32:32 - INFO - Processing 54522 files across 518 folders
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\3DO 3DO Interactive Multiplayer - Firmware (Retool) with 4 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - 2600 (Retool) with 164 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 2600 (Parent-Clone) (Retool) with 482 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 2600 (Retool) with 476 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 2600 & VCS - Applications (Retool) with 3 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 2600 & VCS - Educational (Retool) with 14 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 2600 & VCS - Games (Retool) with 215 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 2600 & VCS - Homebrew - Games - [BIN] (Retool) with 31 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Good2600 v3.14 (Retool) with 1 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - 5200 (Retool) with 65 files
+2025-08-25 23:32:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 5200 (Parent-Clone) (Retool) with 68 files
+2025-08-25 23:32:35 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 5200 (Retool) with 68 files
+2025-08-25 23:32:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 5200 - Firmware (Retool) with 1 files
+2025-08-25 23:32:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 5200 - Games (Retool) with 65 files
+2025-08-25 23:32:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 5200 - Homebrew - Games (Retool) with 3 files
+2025-08-25 23:32:46 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Good5200 v2.01 (Retool) with 1 files
+2025-08-25 23:32:46 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - 7800 (Retool) with 15 files
+2025-08-25 23:32:46 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 7800 (BIN) (Parent-Clone) (Retool) with 61 files
+2025-08-25 23:32:46 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari 7800 (BIN) (Retool) with 3 files
+2025-08-25 23:32:47 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 7800 - Firmware (Retool) with 2 files
+2025-08-25 23:32:47 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 7800 - Games (Retool) with 63 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Good7800 v3.28 (Retool) with 1 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - 8-bit Family (Parent-Clone) (Retool) with 1 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - 8-bit Family (Retool) with 1 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 8bit - Applications - [BIN] (Retool) with 1 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 8bit - Games - [BIN] (Retool) with 2 files
+2025-08-25 23:32:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari 8bit - Operating Systems - [BIN] (Retool) with 1 files
+2025-08-25 23:32:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari Lynx (LYX) (Parent-Clone) (Retool) with 75 files
+2025-08-25 23:32:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Atari Lynx (LYX) (Retool) with 1 files
+2025-08-25 23:32:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari - Lynx (Retool) with 43 files
+2025-08-25 23:32:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari Lynx - Firmware (Retool) with 1 files
+2025-08-25 23:32:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari Lynx - Games - [LNX] (Retool) with 67 files
+2025-08-25 23:32:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atari ST - Operating Systems - [IMG] (Retool) with 1 files
+2025-08-25 23:32:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Atomiswave (Retool) with 3 files
+2025-08-25 23:32:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai - WonderSwan (Parent-Clone) (Retool) with 78 files
+2025-08-25 23:32:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai - WonderSwan (Retool) with 78 files
+2025-08-25 23:33:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai WonderSwan - Applications (Retool) with 1 files
+2025-08-25 23:33:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai WonderSwan - Games (Retool) with 96 files
+2025-08-25 23:33:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai - WonderSwan Color (Parent-Clone) (Retool) with 68 files
+2025-08-25 23:33:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai - WonderSwan Color (Retool) with 68 files
+2025-08-25 23:33:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Bandai WonderSwan Color - Games (Retool) with 74 files
+2025-08-25 23:33:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Cannonball (Retool) with 1 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Coleco - ColecoVision (Parent-Clone) (Retool) with 1 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Coleco - ColecoVision (Retool) with 1 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Coleco ColecoVision - Firmware (Retool) with 1 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore - Amiga (Parent-Clone) (Retool) with 5 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore - Amiga (Retool) with 5 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore Amiga - Coverdisks - [ADF] (Retool) with 3 files
+2025-08-25 23:33:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore Amiga - Firmware (Retool) with 16 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore Amiga - Games - Public Domain - [ADF] (Retool) with 1 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Commodore Amiga - Games - [ADF] (Retool) with 58 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\DOS (Retool) with 3 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\IBM - PC and Compatibles (Digital) (Steam) (Hentai) (Retool) with 2 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\IBM PCjr - Games - [JRC] (Retool) with 1 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Arcade Games (Retool) with 6711 files
+2025-08-25 23:33:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - ColecoVision Games (Retool) with 513 files
+2025-08-25 23:33:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - FDS Games (Retool) with 204 files
+2025-08-25 23:33:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Game Gear Games (Retool) with 338 files
+2025-08-25 23:33:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Master System Games (Retool) with 337 files
+2025-08-25 23:33:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Megadrive Games (Retool) with 1741 files
+2025-08-25 23:33:48 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - MSX 1 Games (Retool) with 1716 files
+2025-08-25 23:33:48 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Neo Geo Games (Retool) with 655 files
+2025-08-25 23:33:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Neo Geo Pocket Games (Retool) with 90 files
+2025-08-25 23:34:12 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - NES Games (Retool) with 1347 files
+2025-08-25 23:34:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - PC-Engine Games (Retool) with 294 files
+2025-08-25 23:34:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - Sega SG-1000 Games (Retool) with 72 files
+2025-08-25 23:34:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - SNES Games (Retool) with 1094 files
+2025-08-25 23:34:47 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - SuprGrafx Games (Retool) with 4 files
+2025-08-25 23:34:47 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - ZX Spectrum Games (Retool) with 1315 files
+2025-08-25 23:35:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool) with 2883 files
+2025-08-25 23:36:48 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Aero Fighters 2 with 1 files
+2025-08-25 23:36:48 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Aero Fighters 3 with 1 files
+2025-08-25 23:36:48 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Aggressors of Dark Kombat with 1 files
+2025-08-25 23:36:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Alpha Fighter with 1 files
+2025-08-25 23:36:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Alpha Mission II with 2 files
+2025-08-25 23:36:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Art of Fighting with 1 files
+2025-08-25 23:36:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Art of Fighting 3 - The Path of the Warrior with 1 files
+2025-08-25 23:36:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Asian Dynamite with 1 files
+2025-08-25 23:36:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Avengers In Galactic Storm (US with 1 files
+2025-08-25 23:36:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Block Carnival with 1 files
+2025-08-25 23:36:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Blue's Journey with 1 files
+2025-08-25 23:36:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bomber Man World with 1 files
+2025-08-25 23:36:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Boomer Rang'r with 1 files
+2025-08-25 23:36:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Botanic (English with 1 files
+2025-08-25 23:36:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Boulder Dash with 1 files
+2025-08-25 23:36:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Buggy Boy with 1 files
+2025-08-25 23:36:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Cannon Spike with 1 files
+2025-08-25 23:36:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Choutetsu Brikin'ger with 1 files
+2025-08-25 23:36:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Circus with 1 files
+2025-08-25 23:36:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Cobra-Command (World with 1 files
+2025-08-25 23:36:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Demon's World with 1 files
+2025-08-25 23:36:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Desert War with 1 files
+2025-08-25 23:36:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\DownTown with 4 files
+2025-08-25 23:36:53 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dragon Unit with 1 files
+2025-08-25 23:36:53 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dream Land with 1 files
+2025-08-25 23:36:53 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dunk Mania (Japan, DM1 with 1 files
+2025-08-25 23:36:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dynablaster with 1 files
+2025-08-25 23:36:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Far East of Eden - Kabuki Klash with 1 files
+2025-08-25 23:36:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fatal Fury - King of Fighters with 1 files
+2025-08-25 23:36:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fatal Fury 2 with 1 files
+2025-08-25 23:36:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fatal Fury 3 - Road to the Final Victory with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fire Hawk (World) with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fire Truck with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Football Champ with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fortress 2 Blue Arcade (World) (ver 1.01 with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Galaxian Growing Galaxip with 1 files
+2025-08-25 23:36:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Go Go Mr. Yamaguchi with 1 files
+2025-08-25 23:36:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Golgo 13 (Japan, GLG1 with 1 files
+2025-08-25 23:36:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ground Effects with 1 files
+2025-08-25 23:36:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Guardians with 1 files
+2025-08-25 23:36:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hidden Catch (World) with 1 files
+2025-08-25 23:36:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hidden Catch 2 (pcb ver 3.03) (Kor with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hidden Catch 3 (ver 1.00 with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hoops '96 (Europe with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Invinco with 2 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Joust (White with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Karnov's Revenge with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour Super Heroes Plus with 1 files
+2025-08-25 23:36:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Land Sea Air Squad with 1 files
+2025-08-25 23:36:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Last Striker with 1 files
+2025-08-25 23:36:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Legend of Success Joe with 1 files
+2025-08-25 23:36:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Crash Race with 2 files
+2025-08-25 23:36:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Line of Fire with 1 files
+2025-08-25 23:36:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Martial Masters with 1 files
+2025-08-25 23:36:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Matrimelee with 1 files
+2025-08-25 23:36:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Metal Slug 2 - Super Vehicle-001 with 1 files
+2025-08-25 23:36:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Michael Jackson's Moonwalker (World) (FD1094 with 1 files
+2025-08-25 23:36:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mighty Warriors (24 with 1 files
+2025-08-25 23:36:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Money Puzzle Exchanger with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mr. Driller (Japan, DRI1 with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ms. Pac-Man with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Multi 5 with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Neo Turf Masters with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\New Hidden Catch (World) with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ninja-Kid II with 1 files
+2025-08-25 23:37:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ocean to Ocean (Medal) (DECO Cassette MD) (No.10 with 1 files
+2025-08-25 23:37:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Oriental Legend with 1 files
+2025-08-25 23:37:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Oriental Legend Super with 1 files
+2025-08-25 23:37:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Out Run (sitdown with 2 files
+2025-08-25 23:37:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Phoenix (Irecsa with 4 files
+2025-08-25 23:37:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pipi & Bibis with 1 files
+2025-08-25 23:37:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pleasure Goal with 1 files
+2025-08-25 23:37:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pop 'n Bounce with 1 files
+2025-08-25 23:37:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Prime Goal EX (Japan, PG1 with 1 files
+2025-08-25 23:37:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 2 with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Star with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzled with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzli 2 with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rabbit (Asia 3 with 1 files
+2025-08-25 23:37:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ragnagard with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Raiden II New with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rally Bike with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Real Bout Fatal Fury 2 - The Newcomers with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Real Bout Fatal Fury Special with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Relief Pitcher (Rev D, 07 Jun 1992 with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Return of the Invaders (bootleg w with 1 files
+2025-08-25 23:37:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Robocop 2 (Euro with 1 files
+2025-08-25 23:37:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rohga Armor Force (Asia with 1 files
+2025-08-25 23:37:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rolling Crash with 1 files
+2025-08-25 23:37:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rootin' Tootin' with 1 files
+2025-08-25 23:37:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown with 1 files
+2025-08-25 23:37:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown II with 1 files
+2025-08-25 23:37:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown III with 1 files
+2025-08-25 23:37:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown IV - Amakusa's Revenge with 1 files
+2025-08-25 23:37:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown V with 1 files
+2025-08-25 23:37:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Samurai Shodown V Special with 1 files
+2025-08-25 23:37:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Savage Reign with 1 files
+2025-08-25 23:37:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Sengoku with 1 files
+2025-08-25 23:37:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Sengoku 2 with 1 files
+2025-08-25 23:37:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Sengoku 3 with 1 files
+2025-08-25 23:37:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Sengoku Blade - Sengoku Ace Episode II with 1 files
+2025-08-25 23:37:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Shinobi with 1 files
+2025-08-25 23:37:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Snow Bros. 2 - With New Elves with 2 files
+2025-08-25 23:37:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Spin Master with 1 files
+2025-08-25 23:37:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Stakes Winner with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Star Sweep (Japan, STP1 with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Strikers 1945 III (World) with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Dodge Ball with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Hang-On (sitdown with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Qix (World with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Sidekicks with 1 files
+2025-08-25 23:37:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Sidekicks 2 - The World Championship with 1 files
+2025-08-25 23:37:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Sidekicks 3 - The Next Glory with 1 files
+2025-08-25 23:37:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Spacefortress Macross with 1 files
+2025-08-25 23:37:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Spacefortress Macross II with 2 files
+2025-08-25 23:37:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Susume! Mile Smile with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tac with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tetris with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Game Paradise - Master of Shooting! with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Irritating Maze with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Killing Blade with 1 files
+2025-08-25 23:37:11 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Killing Blade Plus with 1 files
+2025-08-25 23:37:12 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The King of Fighters 2004 Plus with 1 files
+2025-08-25 23:37:12 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Last Blade with 1 files
+2025-08-25 23:37:12 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Last Blade 2 with 1 files
+2025-08-25 23:37:12 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Ultimate 11 - The SNK Football Championship with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Thundercade with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tokio with 2 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tornado Baseball with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Traverse USA with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tron (8 with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Truxton with 1 files
+2025-08-25 23:37:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Truxton II with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\U.N. Defense Force - Earth Joker (US with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ultra X Weapons with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Vamf x1 with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Voltage Fighter - Gowcaizer with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Wild Fang with 1 files
+2025-08-25 23:37:14 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Windjammers with 1 files
+2025-08-25 23:37:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Yes with 1 files
+2025-08-25 23:37:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Zed Blade with 1 files
+2025-08-25 23:37:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Zintrick with 1 files
+2025-08-25 23:37:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\1000 Miglia - Great 1000 Miles Rally (94\05 with 2 files
+2025-08-25 23:37:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\1000 Miglia - Great 1000 Miles Rally (94\06 with 1 files
+2025-08-25 23:37:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\1000 Miglia - Great 1000 Miles Rally (Taiwan 94\07 with 1 files
+2025-08-25 23:37:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Aero Fighters (World\USA + Canada\Korea\Hong Kong with 1 files
+2025-08-25 23:37:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Age Of Heroes - Silkroad 2 (v0.63 - 2001\02 with 1 files
+2025-08-25 23:37:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Akkanbeder (Ver 2.5J 1995\06 with 1 files
+2025-08-25 23:37:16 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arabian Magic (Ver 1.0A 1992\07 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arabian Magic (Ver 1.0J 1992\07 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arabian Magic (Ver 1.0O 1992\07 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arch Rivals (rev 4.0 6\29 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arkanoid Returns (Ver 2.02A 1997\02 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arkanoid Returns (Ver 2.02J 1997\02 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Arkanoid Returns (Ver 2.02O 1997\02 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\B.C. Kid\Bonk's Adventure with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Battle Garegga (Europe\USA\Japan with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Bobble II (Ver 0.0J 1993\12 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Bobble II (Ver 2.5O 1994\10 with 1 files
+2025-08-25 23:37:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Bobble II (Ver 2.6O 1994\12 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Memories - The Story Of Bubble Bobble III (Ver 2.3J 1996\02 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Memories - The Story Of Bubble Bobble III (Ver 2.4O 1996\02 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Symphony (Ver 2.5A 1994\10 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Symphony (Ver 2.5J 1994\10 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bubble Symphony (Ver 2.5O 1994\10 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Bust-A-Move Again (Ver 2.3A 1995\07 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Cleopatra Fortune (Ver 2.1J 1996\09 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Cosmo Police Galivan (12\26 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dan-Ku-Ga (Ver 0.0J 1994\12 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Darius Gaiden - Silver Hawk (Ver 2.5A 1994\09 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Darius Gaiden - Silver Hawk (Ver 2.5J 1994\09 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Darius Gaiden - Silver Hawk (Ver 2.5O 1994\09 with 1 files
+2025-08-25 23:37:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Darius Gaiden - Silver Hawk Extra Version (Ver 2.7J 1995\03 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Deluxe 5 (ver. 0107, 07\01 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Demon Front\Moyu Zhanxian (68k label V105, ROM M105XX 08\05\02) (ARM label V105, ROM 08\05 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Demon Front V1.1\Moyu Zhanxian V1.1 (68k label V107KR, ROM M107KR 11\03\03) (ARM label V106KR, ROM 10\16 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\DoDonPachi (International, Master Ver. 97\02 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dragon World 3\Zhongguo Long 3\Dungfong Zi Zyu 3 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dungeon Magic (Ver 2.1A 1994\02 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Dungeon Magic (Ver 2.1O 1994\02 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Elevator Action Returns (Ver 2.2O 1995\02 with 1 files
+2025-08-25 23:37:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\ESP Ra.De. (International, Ver. 98\04 with 1 files
+2025-08-25 23:37:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Espgaluda (2003\10 with 2 files
+2025-08-25 23:37:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Fever SOS (International, Ver. 98\09 with 1 files
+2025-08-25 23:37:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Flash Boy (vertical) (DECO Cassette MD) (No.12\Ver.0 with 1 files
+2025-08-25 23:37:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Gekirindan (Ver 2.3J 1995\09 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Gimme A Break (7\7 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Global Champion (Ver 2.1A 1994\07 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Gogetsuji Legends (US, Ver. 95\06 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Great 1000 Miles Rally - Evolution Model!!! (94\09 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Great 1000 Miles Rally - U.S.A Version! (94\09 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Great 1000 Miles Rally 2 USA (95\05 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Gunlock (Ver 2.3O 1994\01 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Guwange (Japan, Master Ver. 99\06 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hana to Ojisan [BET] (ver 1.01, 1991\12 with 1 files
+2025-08-25 23:37:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hat Trick Hero '93 (Ver 1.0J 1993\02 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hat Trick Hero '95 (Ver 2.5A 1994\11 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Hat Trick Hero '95 (Ver 2.5J 1994\11 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Head Panic (ver. 0117, 17\01 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\High Impact Football (rev LA5 02\15 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\International Cup '94 (Ver 2.2O 1994\05 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Jr. Pac-Man (11\9 with 1 files
+2025-08-25 23:37:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Judge Dredd (rev TA1 7\12 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Kaiser Knuckle (Ver 2.1J 1994\07 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Kaiser Knuckle (Ver 2.1O 1994\07 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ketsui - Kizuna Jigoku Tachi (2003\01 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Kirameki Star Road (Ver 2.10J 1997\08 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour\Sanguo Zhan Ji with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour 2\Sanguo Zhan Ji 2 with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour 2 Plus - Nine Dragons\Sanguo Zhan Ji 2 Qunxiong Zhengba\Sanguo Zhan Ji 2 Feilong Zai Tian with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour Plus\Sanguo Zhan Ji Zhengzong Plus with 1 files
+2025-08-25 23:37:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Knights of Valour Super Heroes\Sanguo Zhan Ji Fengyun Zaiqi with 2 files
+2025-08-25 23:37:24 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Kyukyoku Tiger II (Ver 2.1J 1995\11 with 1 files
+2025-08-25 23:37:24 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Land Maker (Ver 2.01J 1998\06 with 1 files
+2025-08-25 23:37:24 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Land Maker (Ver 2.02O 1998\06 with 2 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver EAA, 09\09 with 1 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver EAB, 10\14 with 1 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver EAE, 11\19 with 1 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver UAA, 08\17 with 1 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver UAB, 09\01 with 1 files
+2025-08-25 23:37:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver UAE, 11\19 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Lethal Enforcers (ver unknown, US, 08\06\92 15-11, hacked with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Light Bringer (Ver 2.1J 1994\02 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Light Bringer (Ver 2.2O 1994\04 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Magical Crystals (Japan, 92\01 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Magical Crystals (World, 91\12 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Magical Crystals (World, 92\01 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mille Miglia 2 - Great 1000 Miles Rally (95\04 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mille Miglia 2 - Great 1000 Miles Rally (95\05 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mini Golf (11\25 with 1 files
+2025-08-25 23:37:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mortal Kombat (rev 5.0 T-Unit 03\19 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mortal Kombat (Turbo 3.0 08\31 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Mortal Kombat (Turbo 3.1 09\09 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Multi Champ Deluxe (ver. 0106, 06\01 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\NBA Hangtime (rev L1.1 04\16 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\NBA Jam (rev 3.01 04\07 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\NBA Jam TE (rev 4.0 03\23 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\NBA Maximum Hangtime (rev 1.03 06\09 with 1 files
+2025-08-25 23:37:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Night Stocker (10\6 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Orbs (10\7 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pairs Redemption (V1.0, 10\25 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Photo Y2K\Chaoji Bi Yi Bi\Dajia Lai Zhao Cha with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Photo Y2K 2\Chaoji Bi Yi Bi 2\Dajia Lai Zhao Cha 2\Real and Fake 2 Photo Y2K (M101XX 05\25 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pop'n Pop (Ver 2.07A 1998\02 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pop'n Pop (Ver 2.07J 1998\02 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Pop'n Pop (Ver 2.07O 1998\02 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Power Instinct 2 (US, Ver. 94\04 with 1 files
+2025-08-25 23:37:28 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Prime Time Fighter (Ver 2.1A 1993\05 with 2 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puchi Carat (Ver 2.02J 1997\10 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puchi Carat (Ver 2.02O 1997\10 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 2 (Ver 2.2J 1995\07 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 2 (Ver 2.2O 1995\07 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 2 (Ver 2.3O 1995\07 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 2X (Ver 2.2J 1995\11 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 3 (Ver 2.1A 1996\09 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 3 (Ver 2.1J 1996\09 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 3 (Ver 2.1O 1996\09 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 4 (Ver 2.04A 1997\12 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 4 (Ver 2.04J 1997\12 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Puzzle Bobble 4 (Ver 2.04O 1997\12 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Quiz Theater - 3tsu no Monogatari (Ver 2.3J 1994\11 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rampage (Rev 3, 8\27 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ray Force (Ver 2.3A 1994\01 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ray Force (Ver 2.3J 1994\01 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Recalhorn (Ver 1.42J 1994\5 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ring Rage (Ver 2.3A 1992\08 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ring Rage (Ver 2.3J 1992\08 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ring Rage (Ver 2.3O 1992\08 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Rolling Crush (version 1.07.E - 1999\02 with 1 files
+2025-08-25 23:37:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\S.V.G. - Spectral vs Generation\Sheng Mo Shiji (M68k label V100JP) (ARM label V100JP, ROM 05\12 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\S.V.G. - Spectral vs Generation\Sheng Mo Shiji (M68k label V200) (ARM label V200, ROM 10\11 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Search Eye (English\Korean\Japanese with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Space Invaders '95 - The Attack Of Lunar Loonies (Ver 2.5A 1995\06 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Space Invaders '95 - The Attack Of Lunar Loonies (Ver 2.5O 1995\06 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Space Invaders DX (Ver 2.6J 1994\09 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Stone Ball (4 Players, v1-20 13\12 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Street Football (11\12 with 1 files
+2025-08-25 23:37:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Street Hoop\Street Slam with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Strike Force (rev 1 02\25 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Cup Finals (Ver 2.1O 1993\11 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super Cup Finals (Ver 2.2O 1994\01 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Super High Impact (rev LA1 09\30 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Taito Cup Finals (Ver 1.0O 1993\02 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Taito Power Goal (Ver 2.5O 1994\11 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tang Tang (ver. 0526, 26\05 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\The Gladiator\Shen Jian Fu Mo Lu\Shen Jian Fengyun (M68k label V101) (ARM label V107, ROM 06\06 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Top Ranking Stars (Ver 2.1J 1993\05 with 2 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Top Ranking Stars (Ver 2.1O 1993\05 with 2 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Total Carnage (rev LA1 03\10 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Tougenkyou - Road of the Sword (M68k label V100) (ARM label V100, ROM 02\25 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Trog (rev LA5 03\29 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Twin Cobra II (Ver 2.1A 1995\11 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Twin Cobra II (Ver 2.1O 1995\11 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Twin Qix (Ver 1.0A 1995\01 with 1 files
+2025-08-25 23:37:31 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Ufo Robo Dangar (4\07 with 1 files
+2025-08-25 23:37:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\WWF - Wrestlemania (rev 1.30 08\10 with 1 files
+2025-08-25 23:37:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MAME (Retool)\Zombie Raid (9\28 with 2 files
+2025-08-25 23:37:32 - INFO - Processing folder: E:\Emulation\Rom Library - Final\FinalBurn Neo - TurboGrafx 16 Games (Retool) with 69 files
+2025-08-25 23:37:44 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC PC-Engine & TurboGrafx-16 - Applications (Retool) with 3 files
+2025-08-25 23:37:44 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC PC-Engine & TurboGrafx-16 - Games (Retool) with 319 files
+2025-08-25 23:37:44 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC PC-Engine & TurboGrafx-16 - Samplers (Retool) with 3 files
+2025-08-25 23:37:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodCoCo v3.27 (Retool) with 1 files
+2025-08-25 23:37:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodGBx v3.14 (Retool) with 1 files
+2025-08-25 23:37:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodGen v3.21 (Retool) with 1 files
+2025-08-25 23:38:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodLynx v2.01 (Retool) with 1 files
+2025-08-25 23:38:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodMSX1 v0.999.3 (Retool) with 1 files
+2025-08-25 23:38:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodMSX2 v0.999.3 (Retool) with 1 files
+2025-08-25 23:38:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodNGPx v3.27 (Retool) with 1 files
+2025-08-25 23:38:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodSV v3.27 (Retool) with 1 files
+2025-08-25 23:38:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodVBoy v3.1415 (Retool) with 1 files
+2025-08-25 23:38:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodVect v1.06 (Retool) with 1 files
+2025-08-25 23:38:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodWSx v3.27 (Retool) with 1 files
+2025-08-25 23:38:18 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodCol v3.14 (Retool) with 1 files
+2025-08-25 23:38:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodGBA v3.27 (no videos) (Retool) with 1 files
+2025-08-25 23:38:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodGBA v3.27 (videos only) (Retool) with 1 files
+2025-08-25 23:38:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy Advance (Parent-Clone) (Retool) with 965 files
+2025-08-25 23:38:34 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy Advance (Retool) with 47 files
+2025-08-25 23:38:35 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy Advance - Games (Retool) with 47 files
+2025-08-25 23:38:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodGG v3.20 (Retool) with 1 files
+2025-08-25 23:38:39 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Game Gear (Parent-Clone) (Retool) with 319 files
+2025-08-25 23:38:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Game Gear (Retool) with 334 files
+2025-08-25 23:38:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Game Gear - Firmware (Retool) with 1 files
+2025-08-25 23:38:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Game Gear - Games (Retool) with 339 files
+2025-08-25 23:38:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodINTV v2.03 (Retool) with 1 files
+2025-08-25 23:38:51 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Mattel - Intellivision (Parent-Clone) (Retool) with 4 files
+2025-08-25 23:38:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Mattel Intellivision - Firmware - [BIN] (Retool) with 4 files
+2025-08-25 23:38:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodN64 v3.27 (Retool) with 1 files
+2025-08-25 23:39:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64 (BigEndian) (Parent-Clone) (Retool) with 261 files
+2025-08-25 23:39:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64 (BigEndian) (Retool) with 261 files
+2025-08-25 23:39:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64 (ByteSwapped) (Parent-Clone) (Retool) with 66 files
+2025-08-25 23:39:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64 (ByteSwapped) (Retool) with 66 files
+2025-08-25 23:39:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo 64 - Educational (Retool) with 2 files
+2025-08-25 23:39:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo 64 - Games (Retool) with 299 files
+2025-08-25 23:40:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo 64 - Samplers (Retool) with 1 files
+2025-08-25 23:40:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodNES v3.23b (Retool) with 1 files
+2025-08-25 23:40:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo Entertainment System (Headerless) (Parent-Clone) (Retool) with 1575 files
+2025-08-25 23:40:10 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo Entertainment System (Headerless) (Retool) with 12 files
+2025-08-25 23:40:13 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo Entertainment System (Retool) with 2236 files
+2025-08-25 23:41:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom & Entertainment System - Applications - [NES] (Retool) with 9 files
+2025-08-25 23:41:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom & Entertainment System - Educational (Retool) with 34 files
+2025-08-25 23:41:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom & Entertainment System - Firmware (Retool) with 5 files
+2025-08-25 23:41:02 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom & Entertainment System - Games - [NES] (Retool) with 2498 files
+2025-08-25 23:41:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom & Entertainment System - Games - [UNF] (Retool) with 2 files
+2025-08-25 23:41:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodPCE v1.09a (Retool) with 1 files
+2025-08-25 23:41:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC - PC Engine - TurboGrafx-16 (Parent-Clone) (Retool) with 280 files
+2025-08-25 23:41:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC - PC Engine - TurboGrafx-16 (Retool) with 280 files
+2025-08-25 23:41:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC - PC Engine SuperGrafx (Parent-Clone) (Retool) with 4 files
+2025-08-25 23:41:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC - PC Engine SuperGrafx (Retool) with 4 files
+2025-08-25 23:41:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodSMS v3.20 (Retool) with 1 files
+2025-08-25 23:41:59 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Master System - Mark III (Parent-Clone) (Retool) with 302 files
+2025-08-25 23:42:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Master System - Mark III (Retool) with 293 files
+2025-08-25 23:42:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mark III & Master System - Educational (Retool) with 2 files
+2025-08-25 23:42:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mark III & Master System - Firmware (Retool) with 3 files
+2025-08-25 23:42:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mark III & Master System - Games (Retool) with 324 files
+2025-08-25 23:42:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mark III & Master System - Homebrew - Games (Retool) with 1 files
+2025-08-25 23:42:53 - INFO - Processing folder: E:\Emulation\Rom Library - Final\GoodSNES v3.27 (Retool) with 1 files
+2025-08-25 23:42:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Super Nintendo Entertainment System (Parent-Clone) (Retool) with 1162 files
+2025-08-25 23:43:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Super Nintendo Entertainment System (Retool) with 1162 files
+2025-08-25 23:43:39 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Microsoft - MSX (Parent-Clone) (Retool) with 145 files
+2025-08-25 23:44:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Microsoft - MSX (Retool) with 145 files
+2025-08-25 23:44:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX - Applications - [ROM] (Retool) with 2 files
+2025-08-25 23:44:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX - Compilations - [ROM] (Retool) with 5 files
+2025-08-25 23:44:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX - Educational - [ROM] (Retool) with 1 files
+2025-08-25 23:44:07 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX - Firmware (Retool) with 12 files
+2025-08-25 23:44:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX - Games - [ROM] (Retool) with 218 files
+2025-08-25 23:44:53 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX2 - Firmware (Retool) with 18 files
+2025-08-25 23:44:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX2 - Games - [ROM] (Retool) with 117 files
+2025-08-25 23:44:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX MSX2+ - Firmware (Retool) with 7 files
+2025-08-25 23:44:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\MSX TurboR - Firmware (Retool) with 3 files
+2025-08-25 23:44:58 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC PC-8801 - Firmware (Retool) with 13 files
+2025-08-25 23:45:00 - INFO - Processing folder: E:\Emulation\Rom Library - Final\NEC SuperGrafx - Games (Retool) with 4 files
+2025-08-25 23:45:01 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Family Computer Disk System (FDS) (Parent-Clone) (Retool) with 42 files
+2025-08-25 23:45:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Family Computer Disk System (FDS) (Retool) with 38 files
+2025-08-25 23:45:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Family Computer Disk System (QD) (Parent-Clone) (Retool) with 1 files
+2025-08-25 23:45:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Family Computer Disk System (QD) (Retool) with 1 files
+2025-08-25 23:45:08 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom Disk System - Coverdisks (Retool) with 3 files
+2025-08-25 23:45:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom Disk System - Firmware (Retool) with 1 files
+2025-08-25 23:45:09 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Famicom Disk System - Games - [FDS] (Retool) with 67 files
+2025-08-25 23:45:15 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy (Parent-Clone) (Retool) with 990 files
+2025-08-25 23:45:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy (Retool) with 1333 files
+2025-08-25 23:45:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy - Applications (Retool) with 8 files
+2025-08-25 23:45:40 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy - Firmware (Retool) with 1 files
+2025-08-25 23:45:40 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy - Games (Retool) with 1512 files
+2025-08-25 23:46:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy - Homebrew - Games (Retool) with 1 files
+2025-08-25 23:46:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy Color (Parent-Clone) (Retool) with 964 files
+2025-08-25 23:46:45 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Game Boy Color (Retool) with 1306 files
+2025-08-25 23:47:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy Color - Applications (Retool) with 7 files
+2025-08-25 23:47:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy Color - Demos (Retool) with 1 files
+2025-08-25 23:47:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy Color - Firmware (Retool) with 2 files
+2025-08-25 23:47:22 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Game Boy Color - Games - [GBC] (Retool) with 1477 files
+2025-08-25 23:48:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64DD (Parent-Clone) (Retool) with 1 files
+2025-08-25 23:48:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo 64DD (Retool) with 1 files
+2025-08-25 23:48:21 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DS (Decrypted) (Parent-Clone) (Retool) with 13 files
+2025-08-25 23:48:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DS (Decrypted) (Retool) with 13 files
+2025-08-25 23:48:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DS (Encrypted) (Parent-Clone) (Retool) with 2 files
+2025-08-25 23:48:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DS (Encrypted) (Retool) with 2 files
+2025-08-25 23:48:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DSi (Digital) (CDN) (Decrypted) (Retool) with 1 files
+2025-08-25 23:48:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DSi (Digital) (CDN) (Encrypted) (Parent-Clone) (Retool) with 659 files
+2025-08-25 23:48:42 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Nintendo DSi (Digital) (CDN) (Encrypted) (Retool) with 1157 files
+2025-08-25 23:49:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo DS - Firmware (Retool) with 1 files
+2025-08-25 23:49:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo DS - Games (Retool) with 15 files
+2025-08-25 23:49:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Pokemon Mini (Parent-Clone) (Retool) with 14 files
+2025-08-25 23:49:29 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Pokemon Mini (Retool) with 16 files
+2025-08-25 23:49:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Pokemon Mini - Firmware (Retool) with 1 files
+2025-08-25 23:49:30 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Pokemon Mini - Games (Retool) with 17 files
+2025-08-25 23:49:33 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Virtual Boy (Parent-Clone) (Retool) with 21 files
+2025-08-25 23:49:37 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Virtual Boy (Retool) with 21 files
+2025-08-25 23:49:37 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Virtual Boy - Games (Retool) with 26 files
+2025-08-25 23:49:40 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Wii (Development Kit Hard Drives) (Retool) with 5 files
+2025-08-25 23:49:41 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo - Wii U (Digital) (Retool) with 1 files
+2025-08-25 23:49:41 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Super Famicom & Super Entertainment System - Educational (Retool) with 2 files
+2025-08-25 23:49:42 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Nintendo Super Famicom & Super Entertainment System - Games (Retool) with 636 files
+2025-08-25 23:49:42 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - 32X (Parent-Clone) (Retool) with 37 files
+2025-08-25 23:49:49 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - 32X (Retool) with 42 files
+2025-08-25 23:49:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega 32X - Firmware (Retool) with 3 files
+2025-08-25 23:49:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega 32X - Games (Retool) with 42 files
+2025-08-25 23:50:05 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Mega Drive - Genesis (Parent-Clone) (Retool) with 994 files
+2025-08-25 23:50:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - Mega Drive - Genesis (Retool) with 2759 files
+2025-08-25 23:50:19 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Applications - [BIN] (Retool) with 9 files
+2025-08-25 23:50:20 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Compilations (Retool) with 24 files
+2025-08-25 23:50:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Educational (Retool) with 14 files
+2025-08-25 23:50:25 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Firmware (Retool) with 3 files
+2025-08-25 23:50:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Games - [BIN] (Retool) with 3185 files
+2025-08-25 23:50:26 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega Drive & Genesis - Homebrew - Games (Retool) with 3 files
+2025-08-25 23:50:27 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - SG-1000 (Parent-Clone) (Retool) with 61 files
+2025-08-25 23:50:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega - SG-1000 (Retool) with 61 files
+2025-08-25 23:50:38 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Game 1000 - Games (Retool) with 64 files
+2025-08-25 23:50:40 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Dreamcast - Firmware (Retool) with 1 files
+2025-08-25 23:50:40 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Dreamcast - Games - [CDI] (Retool) with 3 files
+2025-08-25 23:50:50 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Mega-CD & Sega CD - Firmware (Retool) with 6 files
+2025-08-25 23:50:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sega Saturn - Firmware (Retool) with 2 files
+2025-08-25 23:50:52 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sinclair ZX Spectrum - Firmware - [ROM] (Retool) with 6 files
+2025-08-25 23:50:54 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK - NeoGeo Pocket (Parent-Clone) (Retool) with 5 files
+2025-08-25 23:50:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK - NeoGeo Pocket (Retool) with 5 files
+2025-08-25 23:50:55 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK Neo-Geo Pocket - Games (Retool) with 10 files
+2025-08-25 23:50:56 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK - NeoGeo Pocket Color (Parent-Clone) (Retool) with 36 files
+2025-08-25 23:50:57 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK - NeoGeo Pocket Color (Retool) with 36 files
+2025-08-25 23:51:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK Neo-Geo Pocket Color - Games (Retool) with 79 files
+2025-08-25 23:51:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK Neo-Geo Pocket Color - Samplers (Retool) with 1 files
+2025-08-25 23:51:03 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK Neo-Geo CD - Firmware (Retool) with 3 files
+2025-08-25 23:51:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\SNK Neo-Geo CD - Games - [Multipart] (Retool) with 1 files
+2025-08-25 23:51:04 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony - PlayStation Portable (PSN) (Decrypted) (Parent-Clone) (Retool) with 9 files
+2025-08-25 23:51:06 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony - PlayStation Portable (PSN) (Decrypted) (Retool) with 115 files
+2025-08-25 23:51:17 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony - PlayStation Portable (PSN) (Retool) with 2 files
+2025-08-25 23:51:23 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony - PlayStation Portable (PSX2PSP) (Retool) with 1 files
+2025-08-25 23:51:24 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony PlayStation - Firmware (Retool) with 12 files
+2025-08-25 23:51:24 - INFO - Processing folder: E:\Emulation\Rom Library - Final\Sony PlayStation 2 - Firmware (Retool) with 2 files
+2025-08-25 23:55:28 - INFO - Processing completed in 1385.71 seconds
+2025-08-25 23:55:28 - INFO - Total processing time: 1401.20 seconds
+2025-08-25 23:55:28 - INFO - Copy rate: 36.5 files/second

@@ -1,0 +1,90 @@
+2025-08-25 23:55:28 - INFO - ================================================================================
+ENHANCED ROM ORGANIZER - PROCESSING SUMMARY
+================================================================================
+Timestamp: 2025-08-25 23:55:28.848614
+Processing Time: 1404.57 seconds
+Mode: LIVE RUN
+
+PROCESSING STATISTICS:
+  Platforms Found: 52
+  Platforms Selected: 52
+  Total Files Found: 54,522
+  Files Copied (New): 50,569
+  Files Replaced: 0
+  Files Skipped (Identical): 3,953
+  Files Skipped (Unknown): 0
+  Errors: 0
+
+SELECTED PLATFORMS:
+  [x] 3do
+  [x] amiga
+  [x] arcade
+  [x] atari2600
+  [x] atari5200
+  [x] atari7800
+  [x] atari800
+  [x] atarilynx
+  [x] atarist
+  [x] atomiswave
+  [x] cannonball
+  [x] coleco
+  [x] colecovision
+  [x] dreamcast
+  [x] fds
+  [x] gamegear
+  [x] gb
+  [x] gba
+  [x] gbc
+  [x] genesis
+  [x] intellivision
+  [x] mastersystem
+  [x] msx
+  [x] n64
+  [x] n64dd
+  [x] nds
+  [x] neogeocd
+  [x] nes
+  [x] ngp
+  [x] ngpc
+  [x] pc
+  [x] pc98
+  [x] pcengine
+  [x] pokemini
+  [x] ps2
+  [x] psp
+  [x] psx
+  [x] saturn
+  [x] sega32x
+  [x] segacd
+  [x] sfc
+  [x] sg1000
+  [x] snes
+  [x] supergrafx
+  [x] turbografx
+  [x] unknown
+  [x] virtualboy
+  [x] wii
+  [x] wiiu
+  [x] wonderswan
+  [x] wonderswancolor
+  [x] zxspectrum
+
+PERFORMANCE METRICS:
+  Files per Second: 36.0
+  Average File Size: Calculated during processing
+
+LOGS GENERATED:
+  [LOG] Operations: logs/operations_20250825_233204.log
+  [STATS] Analysis: logs/analysis_20250825_233204.log
+  [ERRORS] Errors: logs/errors_20250825_233204.log
+  [PROGRESS] Progress: logs/progress_20250825_233204.log
+  [LOG] Summary: logs/summary_20250825_233204.log
+  [PERF] Performance: logs/performance_20250825_233204.log
+
+PERFORMANCE OPTIMIZATIONS:
+  [THREAD] Concurrent I/O workers: 2
+  [MEM] Memory-mapped hash calculation for large files (>10MB)
+  [CYCLE] Chunked processing with 64KB chunks
+  [STATS] Thread-safe progress tracking every 100 files
+
+================================================================================

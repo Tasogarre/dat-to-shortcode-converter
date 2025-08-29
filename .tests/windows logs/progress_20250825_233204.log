@@ -1,0 +1,13 @@
+2025-08-25 23:32:04 - INFO - Starting enhanced ROM organization...
+2025-08-25 23:32:04 - INFO - Source: E:\Emulation\Rom Library - Final
+2025-08-25 23:32:04 - INFO - Target: E:\Emulation\dat-to-sc\roms-target
+2025-08-25 23:32:04 - INFO - Mode: LIVE RUN
+2025-08-25 23:32:04 - INFO - Phase 1: Analyzing ROM collection...
+2025-08-25 23:32:04 - INFO - Phase 2: Interactive platform selection...
+2025-08-25 23:32:07 - INFO - Selected 52 platforms for processing
+2025-08-25 23:32:07 - INFO - Phase 3: Processing ROM files...
+2025-08-25 23:55:28 - INFO - [OK] Processing complete!
+2025-08-25 23:55:28 - INFO - [STATS] Files copied: 50,569
+2025-08-25 23:55:28 - INFO - [STATS] Files skipped (duplicates): 3,953
+2025-08-25 23:55:28 - INFO - [STATS] Errors: 0
+2025-08-25 23:55:28 - INFO - [TIME] Total time: 1401.20 seconds
