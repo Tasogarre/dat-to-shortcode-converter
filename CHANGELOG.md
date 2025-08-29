@@ -3,6 +3,19 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.8] - 2025-08-29
+
+### Improved
+- **Phase 4 Verification Summary**: Fixed misleading "Processing completion" percentage to clearly distinguish between unique files in target vs overall processing success
+- **Terminal Output Clarity**: Enhanced "Unique ROMs renamed" label to specify "(duplicate filename, different SHA1)" for better understanding
+- **Phase 2 Visual Enhancement**: Added meaningful emojis to Selection Summary (🎮 platforms, 📁 files, 📂 folders, ⚠️ excluded, ❓ unknown, 🚫 unsupported)
+- **Emoji Spacing**: Fixed extra spaces after emojis throughout terminal output for consistent formatting
+
+### Technical Details
+- **Processing Success Calculation**: Now shows separate "Unique files in target" percentage and "Processing completion" percentage
+- **Label Clarity**: "Duplicates renamed" changed to "Unique ROMs renamed: X (duplicate filename, different SHA1)" to clarify these are name collisions, not content duplicates
+- **Consistent Spacing**: Removed extra space characters after emojis (🛡️, ⚠️, ⏱️, ⏭️) throughout the codebase
+
 ## [0.12.7] - 2025-08-29
 
 ### Improved

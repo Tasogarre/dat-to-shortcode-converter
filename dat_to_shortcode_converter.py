@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.7"
+__version__ = "0.12.8"
 VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1307,14 +1307,14 @@ class ModernTerminalDisplay:
         print("PHASE 2: SELECTION SUMMARY")
         print("-" * 80)
         print("✓ Processing: ALL SUPPORTED PLATFORMS")
-        print(f"  • Platforms to process:            {platforms_to_process:,}")
-        print(f"  • Files to process:            {self.stats['files_to_process']:,}")
-        print(f"  • Folders to process:             {self.stats['directories_with_roms']:,}")
+        print(f"  🎮 Platforms to process:            {platforms_to_process:,}")
+        print(f"  📁 Files to process:            {self.stats['files_to_process']:,}")
+        print(f"  📂 Folders to process:             {self.stats['directories_with_roms']:,}")
         print()
         print("✗ Not Processing:")
-        print(f"  • Excluded platform files:      {self.stats['files_excluded']:,} (will remain in source)")
-        print(f"  • Unknown platform files:         {self.stats['files_unknown']:,} (will remain in source)")
-        print(f"  • Files in excluded/unknown:   {self.stats['non_rom_files']:,} (will remain in source - these are ROM files in unsupported platforms)")
+        print(f"  ⚠️ Excluded platform files:      {self.stats['files_excluded']:,} (will remain in source)")
+        print(f"  ❓ Unknown platform files:         {self.stats['files_unknown']:,} (will remain in source)")
+        print(f"  🚫 Files in excluded/unknown:   {self.stats['non_rom_files']:,} (will remain in source - these are ROM files in unsupported platforms)")
         print()
         
     def start_processing_phase(self):
@@ -1455,8 +1455,10 @@ class ModernTerminalDisplay:
         print("Verification:")
         print(f"  ✓ Source files processed:        {self.stats['files_to_process']:,}")
         print(f"  ✓ Target files created:          {self.stats['files_copied'] + self.stats['files_renamed']:,}  [Checksum verified]")
-        completion_pct = ((self.stats['files_copied'] + self.stats['files_renamed']) / max(1, self.stats['files_to_process'])) * 100
-        print(f"  ✓ Processing completion:           {completion_pct:.1f}%  (Files successfully processed)")
+        unique_pct = ((self.stats['files_copied'] + self.stats['files_renamed']) / max(1, self.stats['files_to_process'])) * 100
+        print(f"  ✓ Unique files in target:         {unique_pct:.1f}%  (Remaining were identical duplicates)")
+        success_pct = (((self.stats['files_copied'] + self.stats['files_renamed'] + self.stats.get('files_skipped_duplicate', 0)) / max(1, self.stats['files_to_process'])) * 100) if self.stats['files_failed'] == 0 else ((self.stats['files_to_process'] - self.stats['files_failed']) / max(1, self.stats['files_to_process'])) * 100
+        print(f"  ✓ Processing completion:           {success_pct:.1f}%  (Files successfully processed)")
         print()
         print("Performance:")
         print(f"  • Total time:                  {self.stats['processing_time']:.1f} sec")
@@ -3436,7 +3438,7 @@ class EnhancedROMOrganizer:
             "🎮 ENHANCED ROM ORGANIZER - PROCESSING SUMMARY 🎮",
             "=" * 80,
             f"📅 Timestamp: {datetime.now()}",
-            f"⏱️  Processing Time: {self.stats.processing_time:.2f} seconds",
+            f"⏱️ Processing Time: {self.stats.processing_time:.2f} seconds",
             f"🔧 Mode: {'DRY RUN' if self.dry_run else 'LIVE RUN'}",
             "",
             "📊 PROCESSING STATISTICS:",
@@ -3508,10 +3510,10 @@ class EnhancedROMOrganizer:
             summary_lines.extend([
                 "",
                 "🔄 DUPLICATE FILENAME HANDLING:",
-                f"  🛡️  Files Renamed to Prevent Overwrites: {self.stats.files_renamed_duplicates:,}",
+                f"  🛡️ Files Renamed to Prevent Overwrites: {self.stats.files_renamed_duplicates:,}",
                 f"  📝 Naming Pattern: filename (n).ext or filename (hint).ext",
                 f"  📋 Check operations log for specific rename decisions",
-                f"  ⚠️  Data Loss Prevented: {self.stats.files_renamed_duplicates:,} files would have been overwritten!"
+                f"  ⚠️ Data Loss Prevented: {self.stats.files_renamed_duplicates:,} files would have been overwritten!"
             ])
         
         if self.stats.processing_time > 0:
@@ -3796,11 +3798,11 @@ Features:
                 
                 print(f"\n📊 File Statistics:")
                 print(f"   📁 Total files discovered: {stats.files_found:,}")
-                print(f"   ⏭️  Files skipped (identical): {stats.files_skipped_duplicate:,}")
+                print(f"   ⏭️ Files skipped (identical): {stats.files_skipped_duplicate:,}")
                 print(f"   📄 New files copied: {stats.files_copied:,}")
                 if stats.files_renamed_duplicates > 0:
-                    print(f"   📝 Duplicates renamed: {stats.files_renamed_duplicates:,} (prevented overwrites!)")
-                    organizer.logger_summary.info(f"   📝 Duplicates renamed: {stats.files_renamed_duplicates:,} (prevented overwrites!)")
+                    print(f"   📝 Unique ROMs renamed: {stats.files_renamed_duplicates:,} (duplicate filename, different SHA1)")
+                    organizer.logger_summary.info(f"   📝 Unique ROMs renamed: {stats.files_renamed_duplicates:,} (duplicate filename, different SHA1)")
                 if stats.files_replaced > 0:
                     print(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
                     organizer.logger_summary.info(f"   🔄 Files replaced (updates): {stats.files_replaced:,}")
