@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.8"
+__version__ = "0.12.9"
 VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -79,6 +79,24 @@ from collections import defaultdict
 
 # Global shutdown handler instance
 shutdown_handler = None
+
+# Debug section formatting helpers
+def print_debug_header(title: str):
+    """Print a visually distinct header for debug sections"""
+    border = "╔" + "═" * 62 + "╗"
+    content = f"║ 🔍 DEBUG MODE: {title:<48} ║"
+    footer = "╚" + "═" * 62 + "╝"
+    print(f"\n{border}")
+    print(content)
+    print(footer)
+
+def print_debug_line(text: str):
+    """Print a debug line with visual indentation"""
+    print(f"│ DEBUG: {text}")
+
+def print_debug_footer():
+    """Print a debug section footer"""
+    print("└" + "─" * 62)
 
 
 class GracefulShutdownHandler:
@@ -1256,7 +1274,7 @@ class ModernTerminalDisplay:
         self.update_interval = 0.1  # 100ms refresh rate
         self.display_lines = 0  # Track how many lines we've drawn
         
-    def show_header(self, source_dir: str, target_dir: str, mode: str, regional_mode: str, threads: int):
+    def show_header(self, source_dir: str, target_dir: str, mode: str, regional_mode: str, threads: int, debug_mode: bool = False):
         """Show fixed header section"""
         print("=" * 80)
         print(VERSION_INFO)
@@ -1265,6 +1283,15 @@ class ModernTerminalDisplay:
         print(f"Target: {target_dir}")
         print(f"Mode: {mode} | Regional: {regional_mode} | Threads: {threads}")
         print("=" * 80)
+        
+        # Show debug mode legend if active
+        if debug_mode:
+            print("\n🔍 DEBUG MODE ACTIVE - Additional diagnostic information will be shown")
+            print("╔════════════════════════════════════════════════════════════════════════════╗")
+            print("║ Debug sections will appear with bordered formatting like this example     ║")
+            print("║ │ DEBUG: Sample debug line with visual indentation                        ║")
+            print("║ └──────────────────────────────────────────────────────────────────────── ║")
+            print("╚════════════════════════════════════════════════════════════════════════════╝")
         print()
         
     def show_phase_discovery(self, non_rom_extensions=None):
@@ -2457,13 +2484,7 @@ class PlatformAnalyzer:
                 if debug_mode:
                     self.logger.debug(f"  [X] No platform match found")
             
-            # Update analysis progress display without intermediate counts
-            if FEATURES['enhanced_terminal_display']:
-                print(f"\r📊 Analyzing: [{idx+1}/{total_dirs}] directories...", end='', flush=True)
-        
-        # Console progress feedback with final counts
-        if FEATURES['enhanced_terminal_display']:
-            print()  # Clear the progress line
+            # Analysis progress removed - "Analysis complete" line is sufficient
         print(f"✅ Analysis complete: {directories_with_roms} directories with ROM files, {len(platforms)} platforms identified")
         print(f"📊 Platform Summary: ✅ {len(platforms)} platforms, ⚠️ {len(excluded)} excluded, ❓ {len(unknown)} unknown")
         if directories_skipped_roms > 0 or directories_skipped_target > 0:
@@ -2490,10 +2511,10 @@ class PlatformAnalyzer:
         self.logger.info(f"  Non-ROM files: {non_rom_files_found:,}")
         
         if debug_mode:
-            print(f"\nDEBUG: FILE EXTENSION ANALYSIS")
-            print(f"DEBUG: Total files analyzed: {total_files_analyzed:,}")
-            print(f"DEBUG: ROM files found: {rom_files_found:,}")
-            print(f"DEBUG: Non-ROM files found: {non_rom_files_found:,}")
+            print_debug_header("FILE EXTENSION ANALYSIS")
+            print_debug_line(f"Total files analyzed: {total_files_analyzed:,}")
+            print_debug_line(f"ROM files found: {rom_files_found:,}")
+            print_debug_line(f"Non-ROM files found: {non_rom_files_found:,}")
         
         if all_file_extensions:
             self.logger.info(f"FILE EXTENSION BREAKDOWN (Top 20):")
@@ -2505,11 +2526,12 @@ class PlatformAnalyzer:
                 self.logger.info(f"  {display_ext}: {count:,} files ({is_rom})")
                 
             if debug_mode:
-                print(f"DEBUG: Top file extensions found:")
+                print_debug_line("Top file extensions found:")
                 for i, (extension, count) in enumerate(top_extensions[:10]):
                     display_ext = extension if extension else "[no ext]"
                     is_rom = "ROM" if extension in ROM_EXTENSIONS else "non-ROM"
-                    print(f"       {i+1:2d}. {display_ext}: {count:,} ({is_rom})")
+                    print(f"│     {i+1:2d}. {display_ext}: {count:,} ({is_rom})")
+                print_debug_footer()
         
         # Create directory statistics summary
         directory_stats = {
@@ -3060,12 +3082,14 @@ class EnhancedROMOrganizer:
             threads = self.async_copy_engine.max_workers
             
             # Show header with configuration
+            debug_mode = self.args and hasattr(self.args, 'debug_analysis') and self.args.debug_analysis
             progress_display.show_header(
                 str(self.source_dir), 
                 str(self.target_dir), 
                 mode, 
                 regional_mode, 
-                threads
+                threads,
+                debug_mode
             )
             
             # Log to file only (no console output)
@@ -3119,10 +3143,10 @@ class EnhancedROMOrganizer:
                 debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
                 
                 if debug_mode:
-                    print(f"\nDEBUG: UNKNOWN FILES COUNT ANALYSIS (Interactive Mode)")
-                    print(f"DEBUG: Found {len(unknown)} unknown folders to analyze...")
-                    print(f"DEBUG: Source directory: {self.source_dir}")
-                    print(f"DEBUG: ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
+                    print_debug_header("UNKNOWN FILES COUNT ANALYSIS (Interactive Mode)")
+                    print_debug_line(f"Found {len(unknown)} unknown folders to analyze...")
+                    print_debug_line(f"Source directory: {self.source_dir}")
+                    print_debug_line(f"ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
                     
                 self.analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING (Interactive Mode):")
                 self.analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
@@ -3163,26 +3187,27 @@ class EnhancedROMOrganizer:
                         self.analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
                         
                         if debug_mode:
-                            print(f"DEBUG: '{unknown_folder}'")
-                            print(f"       Path: {unknown_dir_path}")
-                            print(f"       Exists: {unknown_dir_path.exists()}")
-                            print(f"       Total files: {len(all_files)}")
-                            print(f"       ROM files: {folder_count}")
-                            print(f"       Extensions: {sorted(extensions_found)}")
+                            print_debug_line(f"'{unknown_folder}'")
+                            print(f"│       Path: {unknown_dir_path}")
+                            print(f"│       Exists: {unknown_dir_path.exists()}")
+                            print(f"│       Total files: {len(all_files)}")
+                            print(f"│       ROM files: {folder_count}")
+                            print(f"│       Extensions: {sorted(extensions_found)}")
                             if folder_count != len(all_files):
                                 non_rom_extensions = extensions_found - ROM_EXTENSIONS
-                                print(f"       Non-ROM extensions: {sorted(non_rom_extensions)}")
+                                print(f"│       Non-ROM extensions: {sorted(non_rom_extensions)}")
                     else:
                         self.analyzer.logger.warning(f"    WARNING: Path does not exist!")
                         if debug_mode:
-                            print(f"DEBUG: '{unknown_folder}' -> PATH DOES NOT EXIST!")
+                            print_debug_line(f"'{unknown_folder}' -> PATH DOES NOT EXIST!")
                 
                 self.analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED (Interactive): {unknown_files}")
                 if debug_mode:
-                    print(f"DEBUG: TOTAL unknown files counted: {unknown_files}")
+                    print_debug_line(f"TOTAL unknown files counted: {unknown_files}")
                     if unknown_files == 0 and len(unknown) > 0:
-                        print(f"DEBUG: WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
-                        print(f"DEBUG: This suggests either path issues or non-ROM file extensions")
+                        print_debug_line(f"WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
+                        print_debug_line("This suggests either path issues or non-ROM file extensions")
+                    print_debug_footer()
             
             # DEBUG: Type checking before stats update to identify the list concatenation error
             debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
@@ -3673,10 +3698,10 @@ Features:
             unknown_files_count = 0
             if unknown:
                 if debug_mode:
-                    print(f"\nDEBUG: UNKNOWN FILES COUNT ANALYSIS")
-                    print(f"DEBUG: Found {len(unknown)} unknown folders to analyze...")
-                    print(f"DEBUG: Source directory: {organizer.source_dir}")
-                    print(f"DEBUG: ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
+                    print_debug_header("UNKNOWN FILES COUNT ANALYSIS")
+                    print_debug_line(f"Found {len(unknown)} unknown folders to analyze...")
+                    print_debug_line(f"Source directory: {organizer.source_dir}")
+                    print_debug_line(f"ROM extensions: {sorted(list(ROM_EXTENSIONS))}")
                     
                 organizer.analyzer.logger.info(f"UNKNOWN FILES COUNT DEBUGGING:")
                 organizer.analyzer.logger.info(f"  Unknown folders to check: {len(unknown)}")
@@ -3717,26 +3742,27 @@ Features:
                         organizer.analyzer.logger.info(f"    Extensions found: {sorted(extensions_found)}")
                         
                         if debug_mode:
-                            print(f"DEBUG: '{unknown_folder}'")
-                            print(f"       Path: {unknown_dir_path}")
-                            print(f"       Exists: {unknown_dir_path.exists()}")
-                            print(f"       Total files: {len(all_files)}")
-                            print(f"       ROM files: {folder_count}")
-                            print(f"       Extensions: {sorted(extensions_found)}")
+                            print_debug_line(f"'{unknown_folder}'")
+                            print(f"│       Path: {unknown_dir_path}")
+                            print(f"│       Exists: {unknown_dir_path.exists()}")
+                            print(f"│       Total files: {len(all_files)}")
+                            print(f"│       ROM files: {folder_count}")
+                            print(f"│       Extensions: {sorted(extensions_found)}")
                             if folder_count != len(all_files):
                                 non_rom_extensions = extensions_found - ROM_EXTENSIONS
-                                print(f"       Non-ROM extensions: {sorted(non_rom_extensions)}")
+                                print(f"│       Non-ROM extensions: {sorted(non_rom_extensions)}")
                     else:
                         organizer.analyzer.logger.warning(f"    WARNING: Path does not exist!")
                         if debug_mode:
-                            print(f"DEBUG: '{unknown_folder}' -> PATH DOES NOT EXIST!")
+                            print_debug_line(f"'{unknown_folder}' -> PATH DOES NOT EXIST!")
                 
                 organizer.analyzer.logger.info(f"TOTAL UNKNOWN FILES COUNTED: {unknown_files_count}")
                 if debug_mode:
-                    print(f"DEBUG: TOTAL unknown files counted: {unknown_files_count}")
+                    print_debug_line(f"TOTAL unknown files counted: {unknown_files_count}")
                     if unknown_files_count == 0 and len(unknown) > 0:
-                        print(f"DEBUG: WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
-                        print(f"DEBUG: This suggests either path issues or non-ROM file extensions")
+                        print_debug_line(f"WARNING - Found {len(unknown)} unknown folders but 0 ROM files!")
+                        print_debug_line("This suggests either path issues or non-ROM file extensions")
+                    print_debug_footer()
             
             # DEBUG: Add debugging around the problematic area
             if debug_mode:

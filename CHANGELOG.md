@@ -3,6 +3,20 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.9] - 2025-08-29
+
+### Improved
+- **Debug Mode Visibility**: Debug sections now have distinctive bordered formatting with Unicode box characters for clear identification
+- **Terminal Output Streamlined**: Removed "Analyzing" progress line since analysis is usually instantaneous - "Analysis complete" line is sufficient
+- **Debug Mode Legend**: Added visual legend at startup when debug mode is active to explain the enhanced formatting
+- **Professional Debug Output**: Debug sections now look structured and professional with consistent visual hierarchy
+
+### Technical Details
+- **Debug Formatting Helpers**: Added `print_debug_header()`, `print_debug_line()`, and `print_debug_footer()` functions for consistent debug section styling
+- **Visual Debug Sections**: All debug output now uses bordered formatting with ╔══╗ characters and │ prefixes for clear distinction
+- **Debug Mode Detection**: Header now detects and displays debug mode status with explanatory legend
+- **Clean Analysis Display**: Removed redundant progress indicators that added visual clutter without benefit
+
 ## [0.12.8] - 2025-08-29
 
 ### Improved
