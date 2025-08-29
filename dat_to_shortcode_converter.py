@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.5"
+__version__ = "0.12.6"
 VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -345,7 +345,9 @@ PLATFORM_MAPPINGS = {
     # Nintendo Systems - Enhanced patterns for consolidation (most specific first)
     r"Nintendo.*Super Nintendo.*": ("snes", "Super Nintendo Entertainment System"),
     r"Nintendo.*Super Famicom.*": ("snes", "Super Nintendo Entertainment System"),
+    r"Nintendo.*Super NES.*": ("snes", "Super Nintendo Entertainment System"),  # Handle "Super NES" abbreviation
     r"Nintendo.*Nintendo Entertainment System.*": ("nes", "Nintendo Entertainment System"),
+    r"Nintendo.*\bNES\b.*": ("nes", "Nintendo Entertainment System"),  # Handle "NES" abbreviation with word boundaries
     r"Nintendo.*Famicom.*Entertainment System.*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Famicom(?!\s+(Disk|&)).*": ("nes", "Nintendo Entertainment System"),
     r"Nintendo.*Family Computer(?!\s+Disk).*": ("nes", "Nintendo Entertainment System"),
@@ -1907,9 +1909,14 @@ class AsyncFileCopyEngine:
         progress_lock = Lock()
         files_processed = 0
         files_copied = 0
+        files_renamed = 0
         files_skipped = 0
         errors = 0
         start_time = time.perf_counter()
+        
+        # Track target paths globally to prevent collisions across threads
+        global_target_paths = set()
+        global_paths_lock = Lock()
         
         def update_progress_threadsafe():
             """Thread-safe progress display"""
@@ -1936,8 +1943,9 @@ class AsyncFileCopyEngine:
         
         def process_folder_files(folder_path, folder_files):
             """Process all files from a single folder sequentially"""
-            nonlocal files_processed, files_copied, files_skipped, errors
+            nonlocal files_processed, files_copied, files_renamed, files_skipped, errors
             folder_copied = 0
+            folder_renamed = 0
             folder_skipped = 0 
             folder_errors = 0
             
@@ -1983,16 +1991,53 @@ class AsyncFileCopyEngine:
                         platform_shortcode = source_path.parent.name.lower()
                         source_folder_name = source_path.parent.name
                     
-                    # Determine target path
-                    target_platform_dir = target_dir / platform_shortcode
-                    target_file_path = target_platform_dir / source_path.name
+                    # Thread-safe duplicate handling with SHA1 verification
+                    with global_paths_lock:
+                        target_file_path, rename_reason = get_unique_target_path(
+                            source_path,
+                            target_dir,
+                            platform_shortcode,
+                            source_folder_name,
+                            global_target_paths,
+                            self.operations_logger
+                        )
+                        # Only add to tracking if not skipping identical file
+                        if rename_reason != "skip_identical":
+                            global_target_paths.add(str(target_file_path))
                     
                     # Create target directory if needed
-                    target_platform_dir.mkdir(parents=True, exist_ok=True)
+                    target_file_path.parent.mkdir(parents=True, exist_ok=True)
                     
-                    # Copy file
-                    if not self.dry_run:
-                        if not target_file_path.exists():
+                    # Handle file based on duplicate analysis result
+                    if rename_reason == "skip_identical":
+                        # TRUE DUPLICATE: Same filename AND same SHA1 checksum
+                        folder_skipped += 1
+                        self.operations_logger.info(f"Skipping identical file (SHA1 match): {source_path.name}")
+                        
+                    elif rename_reason and rename_reason.startswith("renamed_"):
+                        # COLLISION: Same filename but DIFFERENT content
+                        if not self.dry_run:
+                            success, copy_info = self._copy_with_retry(source_path, target_file_path)
+                            if success:
+                                folder_renamed += 1  # Track as renamed, not copied
+                                if "hint" in rename_reason:
+                                    hint = rename_reason.split("_")[-1]
+                                    self.operations_logger.info(f"Renamed with folder hint: {source_path.name} -> {target_file_path.name} (hint: {hint})")
+                                else:
+                                    self.operations_logger.info(f"Renamed with number: {source_path.name} -> {target_file_path.name}")
+                            else:
+                                folder_errors += 1
+                                error_msg = f"Copy failed after retries: {copy_info}"
+                                self.errors_logger.error(f"Failed to copy renamed file: {source_path.name} - {copy_info}")
+                                add_error_detail(str(source_path), error_msg)
+                        else:
+                            # Dry run mode - renamed file
+                            folder_renamed += 1
+                            self.operations_logger.debug(f"[DRY RUN] Would copy with rename: {source_path} -> {target_file_path}")
+                            
+                    else:
+                        # UNIQUE FILE: No collision, normal copy
+                        if not self.dry_run:
                             success, copy_info = self._copy_with_retry(source_path, target_file_path)
                             if success:
                                 folder_copied += 1
@@ -2003,12 +2048,9 @@ class AsyncFileCopyEngine:
                                 self.errors_logger.error(f"Failed to copy: {source_path.name} - {copy_info}")
                                 add_error_detail(str(source_path), error_msg)
                         else:
-                            folder_skipped += 1
-                            self.operations_logger.debug(f"File already exists, skipping: {target_file_path}")
-                    else:
-                        # Dry run mode
-                        folder_copied += 1
-                        self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
+                            # Dry run mode - normal copy
+                            folder_copied += 1
+                            self.operations_logger.debug(f"[DRY RUN] Would copy: {source_path} -> {target_file_path}")
                         
                 except Exception as e:
                     folder_errors += 1
@@ -2026,6 +2068,7 @@ class AsyncFileCopyEngine:
             # Update global stats for this folder
             with progress_lock:
                 files_copied += folder_copied
+                files_renamed += folder_renamed
                 files_skipped += folder_skipped
                 errors += folder_errors
         
@@ -2063,6 +2106,7 @@ class AsyncFileCopyEngine:
         with progress_lock:
             update_progress_threadsafe()
             stats.files_copied = files_copied
+            stats.files_renamed_duplicates = files_renamed
             stats.files_skipped_duplicate = files_skipped
             stats.errors = errors
         

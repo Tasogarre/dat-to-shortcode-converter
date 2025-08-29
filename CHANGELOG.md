@@ -3,6 +3,27 @@
 All notable changes to the DAT to Shortcode Converter project are documented here.
 This format follows [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.6] - 2025-08-29
+
+### Fixed
+- **CRITICAL: Silent File Overwrites in Concurrent Processing** - Fixed fatal bug where files with identical names from different source folders were silently overwriting each other, causing data loss
+- **Enhanced Pattern Matching** - Added missing NES abbreviation patterns to recognize folders like "Nintendo - NES (USA)" that were previously showing as unknown platforms  
+- **SHA1 Duplicate Detection** - Implemented comprehensive SHA1 verification to detect truly identical files vs name collisions with different content
+- **Intelligent File Renaming** - Added smart folder hint extraction for meaningful rename patterns (e.g., "Mario (USA).nes", "Mario (Europe).nes")
+
+### Technical Improvements
+- **Thread-Safe Duplicate Handling**: Added global_target_paths tracking with locks to prevent filename collisions across concurrent threads
+- **Pattern Safety**: Used regex word boundaries (\bNES\b) to prevent false positives when "NES" appears inside other words like "Genesis" or "Business"
+- **Complete SHA1 Integration**: Port of existing WSL2 duplicate handling to concurrent processing path with identical behavior
+- **Enhanced Statistics**: Separate tracking for copied vs renamed files with proper count validation
+- **Pattern Hierarchy**: Added missing "Nintendo.*Super NES.*" pattern to ensure Super NES folders map to SNES, not fall through to NES
+
+### Previous Issues Resolved
+- Files with same names from different folders no longer overwrite each other (prevented 93 file losses in test case)
+- "Nintendo - NES" folder variants now properly recognized as NES platform instead of showing as unknown
+- File count discrepancies resolved - reported copies now match actual files in target directory  
+- True duplicate files detected via SHA1 and skipped appropriately vs different files with same names being renamed
+
 ## [0.12.5] - 2025-08-29
 
 ### Fixed
