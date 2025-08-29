@@ -36,7 +36,7 @@ if sys.platform == 'win32':
         pass  # Not critical if this fails
 
 # Version information - MUST be updated with every commit that changes functionality
-__version__ = "0.12.9"
+__version__ = "0.12.10"
 VERSION_DATE = "2025-08-29"
 VERSION_INFO = f"DAT to Shortcode Converter v{__version__} ({VERSION_DATE})"
 
@@ -1339,7 +1339,7 @@ class ModernTerminalDisplay:
     def show_phase_selection(self, platforms_to_process: int):
         """Show Phase 2 selection summary"""
         print("PHASE 2: SELECTION SUMMARY")
-        print("-" * 80)
+        print("=" * 80)
         print("✓ Processing: ALL SUPPORTED PLATFORMS")
         print(f"  🎮 Platforms to process:            {platforms_to_process:,}")
         print(f"  📁 Files to process:            {self.stats['files_to_process']:,}")
@@ -1481,20 +1481,25 @@ class ModernTerminalDisplay:
         print("\n")
         print("PHASE 4: VERIFICATION SUMMARY")
         print("=" * 80)
-        print("Final Statistics:")
+        print("📊 Final Statistics:")
         print(f"  ✓ Files successfully copied:     {self.stats['files_copied']:,}  ({self.stats['files_copied']/max(1,self.stats['files_to_process'])*100:.2f}%)")
         print(f"  ✓ Files renamed (duplicates):         {self.stats['files_renamed']:,}  ({self.stats['files_renamed']/max(1,self.stats['files_to_process'])*100:.2f}%)")
         print(f"  ✗ Files failed:                       {self.stats['files_failed']:,}  ({self.stats['files_failed']/max(1,self.stats['files_to_process'])*100:.2f}%)")
         print()
-        print("Verification:")
+        print("✅ Verification:")
         print(f"  ✓ Source files processed:        {self.stats['files_to_process']:,}")
         print(f"  ✓ Target files created:          {self.stats['files_copied'] + self.stats['files_renamed']:,}  [Checksum verified]")
         unique_pct = ((self.stats['files_copied'] + self.stats['files_renamed']) / max(1, self.stats['files_to_process'])) * 100
         print(f"  ✓ Unique files in target:         {unique_pct:.1f}%  (Remaining were identical duplicates)")
-        success_pct = (((self.stats['files_copied'] + self.stats['files_renamed'] + self.stats.get('files_skipped_duplicate', 0)) / max(1, self.stats['files_to_process'])) * 100) if self.stats['files_failed'] == 0 else ((self.stats['files_to_process'] - self.stats['files_failed']) / max(1, self.stats['files_to_process'])) * 100
+        # Calculate processing completion percentage
+        if self.stats['files_failed'] == 0:
+            success_pct = 100.0  # All files processed successfully
+        else:
+            # Calculate percentage of files that didn't fail
+            success_pct = ((self.stats['files_to_process'] - self.stats['files_failed']) / max(1, self.stats['files_to_process'])) * 100
         print(f"  ✓ Processing completion:           {success_pct:.1f}%  (Files successfully processed)")
         print()
-        print("Performance:")
+        print("⚡ Performance:")
         print(f"  • Total time:                  {self.stats['processing_time']:.1f} sec")
         print(f"  • Average speed:            {self.stats['avg_rate']:,} files/s")
         print()
@@ -3884,7 +3889,7 @@ Features:
                 
                 print(f"\n📂 Organization Statistics:")
                 if hasattr(stats, 'folders_created'):
-                    print(f"   🗂️  Folders created: {len(stats.folders_created)}")
+                    print(f"   🗂️ Folders created: {len(stats.folders_created)}")
                 print(f"   🎮 Platforms organized: {len(stats.selected_platforms)}")
                 print(f"   🌐 Regional mode: {args.regional_mode}")
                 

@@ -185,6 +185,12 @@ Run `python dat_to_shortcode_converter.py --help` for all options.
 
 **Slow performance** - Use local drives, exclude ROM directories from antivirus scanning, or process smaller batches.
 
+### Known Limitations
+
+**File Count Statistics** - Statistics are designed for new executions into empty target folders. Running into folders with existing files is untested and may produce unexpected file counts.
+
+**Existing Target Folders** - While the tool uses SHA1 checksums to detect duplicates and should handle existing files correctly, this scenario has not been thoroughly tested. For predictable results, use empty target directories.
+
 ### Getting Help
 1. Check log files in `logs/` directory
 2. Run `--analyze-only --debug-analysis` for detailed platform detection
