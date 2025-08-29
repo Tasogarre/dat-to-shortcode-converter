@@ -83,20 +83,18 @@ shutdown_handler = None
 # Debug section formatting helpers
 def print_debug_header(title: str):
     """Print a visually distinct header for debug sections"""
-    border = "╔" + "═" * 62 + "╗"
-    content = f"║ 🔍 DEBUG MODE: {title:<48} ║"
-    footer = "╚" + "═" * 62 + "╝"
-    print(f"\n{border}")
-    print(content)
-    print(footer)
+    separator = "═" * 65
+    print(f"\n{separator}")
+    print(f"🔍 DEBUG MODE: {title}")
+    print(separator)
 
 def print_debug_line(text: str):
     """Print a debug line with visual indentation"""
-    print(f"│ DEBUG: {text}")
+    print(f"  DEBUG: {text}")
 
 def print_debug_footer():
     """Print a debug section footer"""
-    print("└" + "─" * 62)
+    print("═" * 65)
 
 
 class GracefulShutdownHandler:
@@ -1287,11 +1285,10 @@ class ModernTerminalDisplay:
         # Show debug mode legend if active
         if debug_mode:
             print("\n🔍 DEBUG MODE ACTIVE - Additional diagnostic information will be shown")
-            print("╔════════════════════════════════════════════════════════════════════════════╗")
-            print("║ Debug sections will appear with bordered formatting like this example     ║")
-            print("║ │ DEBUG: Sample debug line with visual indentation                        ║")
-            print("║ └──────────────────────────────────────────────────────────────────────── ║")
-            print("╚════════════════════════════════════════════════════════════════════════════╝")
+            print("═" * 65)
+            print("Debug sections will appear with clean formatting like this example:")
+            print("  DEBUG: Sample debug line with visual indentation")
+            print("═" * 65)
         print()
         
     def show_phase_discovery(self, non_rom_extensions=None, debug_mode=False):
@@ -2540,7 +2537,7 @@ class PlatformAnalyzer:
                 for i, (extension, count) in enumerate(top_extensions[:10]):
                     display_ext = extension if extension else "[no ext]"
                     is_rom = "ROM" if extension in ROM_EXTENSIONS else "non-ROM"
-                    print(f"│     {i+1:2d}. {display_ext}: {count:,} ({is_rom})")
+                    print(f"     {i+1:2d}. {display_ext}: {count:,} ({is_rom})")
                 print_debug_footer()
         
         # Create directory statistics summary
