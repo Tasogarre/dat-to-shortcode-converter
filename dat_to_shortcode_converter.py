@@ -1294,40 +1294,50 @@ class ModernTerminalDisplay:
             print("╚════════════════════════════════════════════════════════════════════════════╝")
         print()
         
-    def show_phase_discovery(self, non_rom_extensions=None):
+    def show_phase_discovery(self, non_rom_extensions=None, debug_mode=False):
         """Show Phase 1 discovery results"""
-        print("PHASE 1: DISCOVERY & ANALYSIS")
-        print("-" * 80)
-        print("Directory Scan:")
-        print(f"  ✓ Total directories found:        {self.stats['total_directories_found']:,}")
-        print(f"  ✓ Directories with ROM files:     {self.stats['directories_with_roms']:,}  ({self.stats['directories_with_roms']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
-        print(f"  ✓ Empty directories skipped:       {self.stats['empty_directories']:,}  ({self.stats['empty_directories']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
-        print()
-        print("File Discovery:")
-        print(f"  ✓ Total files discovered:      {self.stats['total_files_discovered']:,}")
-        print(f"  ✓ ROM files (supported ext):   {self.stats['rom_files']:,}  ({self.stats['rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
-        print(f"  ✓ Files in excluded/unknown:    {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%) - These ARE ROM files, just not in supported platforms")
-        
-        # Show non-ROM file type breakdown if available
-        if non_rom_extensions and self.stats['non_rom_files'] > 0:
-            print(f"      File types: ", end="")
-            top_extensions = non_rom_extensions.most_common(5)
-            parts = []
-            for extension, count in top_extensions:
-                display_ext = extension if extension else "[no ext]"
-                parts.append(f"{display_ext}: {count:,}")
-            print(", ".join(parts))
-            if len(non_rom_extensions) > 5:
-                remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
-                print(f"      + {len(non_rom_extensions)-5} more types ({remaining:,} files)")
-        print()
-        print("Platform Analysis:")
-        total_platforms = self.stats['supported_platforms'] + self.stats['excluded_platforms'] + self.stats['unknown_platforms']
-        print(f"  ✓ Supported platforms:             {self.stats['supported_platforms']:,}  ({self.stats['supported_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_to_process']:,} files")
-        print(f"  ✓ Excluded platforms:              {self.stats['excluded_platforms']:,}  ({self.stats['excluded_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_excluded']:,} files")
-        print(f"  ✓ Unknown platforms:               {self.stats['unknown_platforms']:,}  ({self.stats['unknown_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_unknown']:,} files")
-        print(f"  ✓ Directories analyzed:           {total_platforms:,}  (100%)")
-        print()
+        if debug_mode:
+            # Detailed debug output with all statistics
+            print_debug_header("PHASE 1: DISCOVERY & ANALYSIS")
+            print_debug_line("Directory Scan:")
+            print_debug_line(f"  ✓ Total directories found:        {self.stats['total_directories_found']:,}")
+            print_debug_line(f"  ✓ Directories with ROM files:     {self.stats['directories_with_roms']:,}  ({self.stats['directories_with_roms']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
+            print_debug_line(f"  ✓ Empty directories skipped:       {self.stats['empty_directories']:,}  ({self.stats['empty_directories']/max(1,self.stats['total_directories_found'])*100:.1f}%)")
+            print_debug_line("")
+            print_debug_line("File Discovery:")
+            print_debug_line(f"  ✓ Total files discovered:      {self.stats['total_files_discovered']:,}")
+            print_debug_line(f"  ✓ ROM files (supported ext):   {self.stats['rom_files']:,}  ({self.stats['rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%)")
+            print_debug_line(f"  ✓ Files in excluded/unknown:    {self.stats['non_rom_files']:,}  ({self.stats['non_rom_files']/max(1,self.stats['total_files_discovered'])*100:.1f}%) - These ARE ROM files, just not in supported platforms")
+            
+            # Show non-ROM file type breakdown if available
+            if non_rom_extensions and self.stats['non_rom_files'] > 0:
+                top_extensions = non_rom_extensions.most_common(5)
+                parts = []
+                for extension, count in top_extensions:
+                    display_ext = extension if extension else "[no ext]"
+                    parts.append(f"{display_ext}: {count:,}")
+                print_debug_line(f"      File types: {', '.join(parts)}")
+                if len(non_rom_extensions) > 5:
+                    remaining = sum(non_rom_extensions.values()) - sum(count for _, count in top_extensions)
+                    print_debug_line(f"      + {len(non_rom_extensions)-5} more types ({remaining:,} files)")
+            print_debug_line("")
+            print_debug_line("Platform Analysis:")
+            total_platforms = self.stats['supported_platforms'] + self.stats['excluded_platforms'] + self.stats['unknown_platforms']
+            print_debug_line(f"  ✓ Supported platforms:             {self.stats['supported_platforms']:,}  ({self.stats['supported_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_to_process']:,} files")
+            print_debug_line(f"  ✓ Excluded platforms:              {self.stats['excluded_platforms']:,}  ({self.stats['excluded_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_excluded']:,} files")
+            print_debug_line(f"  ✓ Unknown platforms:               {self.stats['unknown_platforms']:,}  ({self.stats['unknown_platforms']/max(1,total_platforms)*100:.1f}%) → {self.stats['files_unknown']:,} files")
+            print_debug_line(f"  ✓ Directories analyzed:           {total_platforms:,}  (100%)")
+            print_debug_footer()
+        else:
+            # Simplified standard output - essential information only
+            print("PHASE 1: DISCOVERY & ANALYSIS")
+            print("-" * 80)
+            print(f"✓ Found {self.stats['supported_platforms']:,} supported platforms with {self.stats['files_to_process']:,} ROM files")
+            if self.stats['excluded_platforms'] > 0:
+                print(f"⚠  {self.stats['excluded_platforms']:,} excluded platforms with {self.stats['files_excluded']:,} files (unsupported)")
+            if self.stats['unknown_platforms'] > 0:
+                print(f"❓ {self.stats['unknown_platforms']:,} unknown platforms with {self.stats['files_unknown']:,} files")
+            print()
         
     def show_phase_selection(self, platforms_to_process: int):
         """Show Phase 2 selection summary"""
@@ -3212,23 +3222,24 @@ class EnhancedROMOrganizer:
             # DEBUG: Type checking before stats update to identify the list concatenation error
             debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
             if debug_mode:
-                print(f"\nDEBUG: TYPE ANALYSIS BEFORE STATS UPDATE")
-                print(f"DEBUG: Type of rom_files: {type(rom_files).__name__}, value: {rom_files}")
-                print(f"DEBUG: Type of excluded_files: {type(excluded_files).__name__}, value: {excluded_files}")
-                print(f"DEBUG: Type of unknown_files: {type(unknown_files).__name__}, value: {unknown_files}")
+                print_debug_header("TYPE ANALYSIS BEFORE STATS UPDATE")
+                print_debug_line(f"Type of rom_files: {type(rom_files).__name__}, value: {rom_files}")
+                print_debug_line(f"Type of excluded_files: {type(excluded_files).__name__}, value: {excluded_files}")
+                print_debug_line(f"Type of unknown_files: {type(unknown_files).__name__}, value: {unknown_files}")
                 
                 # Check if excluded_files is somehow a list
                 if not isinstance(excluded_files, int):
-                    print(f"ERROR: excluded_files is not an int! It's {type(excluded_files)}")
-                    print(f"ERROR: excluded dict structure check:")
+                    print_debug_line(f"ERROR: excluded_files is not an int! It's {type(excluded_files)}")
+                    print_debug_line(f"ERROR: excluded dict structure check:")
                     for folder, value in excluded.items():
-                        print(f"    {folder}: {value} (type: {type(value)})")
+                        print_debug_line(f"  {folder}: {value} (type: {type(value)})")
                         if isinstance(value, tuple) and len(value) == 2:
-                            print(f"      reason: {value[0]} (type: {type(value[0])})")
-                            print(f"      file_count: {value[1]} (type: {type(value[1])})")
+                            print_debug_line(f"    reason: {value[0]} (type: {type(value[0])})")
+                            print_debug_line(f"    file_count: {value[1]} (type: {type(value[1])})")
                     # Fallback to prevent crash
                     excluded_files = 0
-                    print(f"DEBUG: Set excluded_files to 0 as fallback")
+                    print_debug_line("Set excluded_files to 0 as fallback")
+                print_debug_footer()
             
             progress_display.stats.update({
                 'supported_platforms': len(platforms),
@@ -3248,7 +3259,8 @@ class EnhancedROMOrganizer:
             # Show discovery results
             # Note: Non-ROM extensions data is only available after file discovery (Phase 3)
             # For Phase 1 analysis, we show basic counts without file type breakdown
-            progress_display.show_phase_discovery()
+            debug_mode = getattr(self.args, 'debug_analysis', False) if hasattr(self, 'args') else False
+            progress_display.show_phase_discovery(debug_mode=debug_mode)
             
             # Log analysis results
             self._log_analysis_results(platforms, excluded, unknown)
@@ -3693,6 +3705,21 @@ Features:
             include_empty_dirs = args.include_empty_dirs if hasattr(args, 'include_empty_dirs') else False
             
             platforms, excluded, unknown, directory_stats = organizer.analyzer.analyze_directory(debug_mode=debug_mode, include_empty_dirs=include_empty_dirs, target_dir=organizer.target_dir)
+            
+            # Show Phase 1 discovery results (missing in analyze_only path)
+            from dat_to_shortcode_converter import ModernTerminalDisplay
+            progress_display = ModernTerminalDisplay()
+            # Populate stats for display
+            total_files = sum(info.file_count for info in platforms.values()) + sum(file_count for _, file_count in excluded.values() if isinstance(file_count, int))
+            progress_display.stats.update({
+                'supported_platforms': len(platforms),
+                'excluded_platforms': len(excluded), 
+                'unknown_platforms': len(unknown),
+                'files_to_process': sum(info.file_count for info in platforms.values()),
+                'files_excluded': sum(file_count for _, file_count in excluded.values() if isinstance(file_count, int)),
+                'files_unknown': 0  # Will be calculated below
+            })
+            progress_display.show_phase_discovery(debug_mode=debug_mode)
             
             # Calculate unknown files count with comprehensive debugging
             unknown_files_count = 0
