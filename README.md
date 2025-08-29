@@ -31,11 +31,19 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 └── psx/
 ```
 
+## 💖 Support This Project
+
+If this tool has been helpful for organizing your ROM collection, consider supporting its development!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-orange?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/kcdworks)
+
+Your support helps maintain and improve this tool for the retrogaming community. Every coffee counts! ☕
+
 ## ✨ Key Features
 
 ### 🚀 **Industry-Leading Coverage**
-- **97.5% success rate** - Successfully processed 55,898+ ROM files with optimized accuracy
-- **58 supported platforms** - Complete RetroArch compatibility including MSX2, Satellaview, PlayStation Vita
+- **97.5% platform detection accuracy** - Successfully processed 55,898+ ROM files with optimized accuracy
+- **58 supported platforms** - Complete RetroArch compatibility with comprehensive platform support
 - **Enhanced Good Tools support** - 30+ Good tool platform codes with improved pattern matching
 - **Specialized tool support** - Good tools, MAME, FinalBurn Neo with advanced preprocessing
 - **Production debugging** - Complete visibility into platform detection with real-time feedback
@@ -51,7 +59,7 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 
 ### 🎮 **Smart Platform Handling**
 - **58 supported platforms** - All major EmulationStation systems plus RetroArch-compatible additions
-- **Enhanced platform support** - MSX2, Nintendo Satellaview, PlayStation Vita, enhanced PSP variants
+- **Enhanced platform support** - Comprehensive gaming systems with enhanced variants
 - **Format-specific organization** - N64 BigEndian/ByteSwapped subfolders
 - **NDS encryption handling** - Separate encrypted/decrypted subfolders
 - **Intelligent consolidation** - Merges firmware/games/applications folders
@@ -64,28 +72,6 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 - **MAME/FinalBurn support** - Specialized handlers for arcade collections
 - **Arcade system support** - Atomiswave, Cannonball (OutRun Engine), and more
 - **Comprehensive ROM format support** - 70+ file extensions from research-based database
-
-## 🔥 Recent Updates (August 2025)
-
-### ✅ **Platform Expansion and Enhanced Debugging (v0.11.0)**
-- **EXPANDED**: Platform support from 52 to 58 platforms with RetroArch compatibility analysis
-- **ADDED**: MSX2, Nintendo Satellaview, PlayStation Vita, enhanced PSP variant support
-- **ENHANCED**: Complete debugging visibility with file extension analysis and platform categorization
-- **IMPROVED**: Clear distinction between supported, excluded, and unknown platforms
-- **VALIDATED**: 97.5% success rate on 55,898 ROM file collection (54,522 supported files)
-
-### ✅ **Critical File Count and Windows Compatibility Fixes**
-- **FIXED**: Double-counting bug in file statistics causing count mismatches
-- **FIXED**: Missing file copying implementation - Complete folder-level threading architecture
-- **FIXED**: Unicode encoding errors on Windows console output
-- **FIXED**: Directory contention causing 0-byte files and copying failures
-- **ENHANCED**: Comprehensive validation ensuring reported statistics match actual operations
-
-### 📈 **Status: Production Ready**
-- **Production validated** - Successfully handles large ROM collections (55K+ files)
-- **All critical bugs resolved** - File counting, copying, and statistics now accurate
-- **Enhanced debugging** - Complete visibility into all processing stages
-- **Cross-platform compatibility** - Tested on Windows 10/11 and Linux (WSL2 limitations documented)
 
 ## 🎮 Supported Platforms
 
@@ -133,12 +119,14 @@ Bridges the gap between ROM preservation collections and emulation frontends by 
 
 ### Download
 ```bash
-# Clone the repository
+# Clone the repository (recommended - includes all required files)
 git clone https://github.com/Tasogarre/dat-to-shortcode-converter.git
 cd dat-to-shortcode-converter
 
-# Or download the script directly
-wget https://raw.githubusercontent.com/Tasogarre/dat-to-shortcode-converter/main/dat_to_shortcode_converter.py
+# Or download all required files:
+# - dat_to_shortcode_converter.py (main script)
+# - good_pattern_handler.py (pattern matching)
+# - subcategory_handler.py (folder processing)
 ```
 
 ### Verify Installation
@@ -235,22 +223,23 @@ output/
 
 ## ⚡ Performance Metrics
 
-For large collections, expect exceptional performance:
+For large collections, expect real-world performance:
 
 | Collection Size | Processing Time | Files/Second |
 |----------------|-----------------|-------------|
-| 50 files       | 0.08 seconds    | **600+/sec** |
-| 1,000 files    | ~1.6 seconds    | ~625/sec     |
-| 10,000 files   | ~16 seconds     | ~625/sec     |
-| 50,000+ files  | ~80 seconds     | ~625/sec     |
+| 1,000 files    | ~15 seconds     | ~65/sec     |
+| 10,000 files   | ~2.5 minutes    | ~65/sec     |
+| 50,000 files   | ~13 minutes     | ~65/sec     |
+| 70,000 files   | ~18 minutes     | ~65/sec     |
 
 **Key Performance Features:**
 - **Real-time progress bars** - Live updates during processing
 - **Concurrent I/O operations** - Multi-threaded file processing
 - **Thread-safe progress tracking** - Updates every 100 files
 - **Memory-efficient processing** - Optimized for large collections
+- **Windows Defender compatible** - Adaptive delays for antivirus scanning
 
-*Performance scales with hardware and storage speed*
+*Performance varies based on file size, antivirus software, and storage type*
 
 ## 📋 Logging Output
 
@@ -355,13 +344,14 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 - Specify your operating system and Python version
 - Provide examples of folder names that aren't working
 
-## 💖 Support This Project
+## ⚖️ Legal Notice
 
-If this tool has been helpful for organizing your ROM collection, consider supporting its development!
+This tool is designed for organizing ROM backups of games you legally own. Users are responsible for complying with their local copyright laws. Only use this tool with:
+- ROM files created from your own legitimately purchased games
+- Homebrew and public domain software
+- Games for which you own the original physical media
 
-[![Buy Me A Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-orange?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/kcdworks)
-
-Your support helps maintain and improve this tool for the retrogaming community. Every coffee counts! ☕
+The developers of this tool do not condone or support piracy. This tool does not include, distribute, or link to copyrighted ROM files.
 
 ## ⚖️ License
 
