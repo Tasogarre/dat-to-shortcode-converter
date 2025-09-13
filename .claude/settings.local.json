@@ -54,7 +54,11 @@
       "Bash(claude upgrade)",
       "WebFetch(domain:buymeacoffee.com)",
       "mcp__tavily-remote__tavily_search",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": [],
